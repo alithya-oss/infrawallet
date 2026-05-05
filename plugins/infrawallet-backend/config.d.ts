@@ -122,6 +122,19 @@ export interface Config {
            */
           token: string;
         }[];
+        kubecost?: {
+          name: string;
+          baseUrl: string;
+          aggregate?: string;
+          tags?: string[];
+          filters?: [
+            {
+              type: string;
+              attribute: string;
+              pattern: string;
+            },
+          ];
+        }[];
         mock?: {
           name: string;
         }[];
