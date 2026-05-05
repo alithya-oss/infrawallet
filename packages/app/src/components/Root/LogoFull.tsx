@@ -1,5 +1,4 @@
 import { styled } from '@mui/material/styles';
-import { default as React } from 'react';
 
 const LogoFullSvg = styled('svg')(() => ({
   width: 'auto',

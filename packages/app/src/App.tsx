@@ -1,12 +1,12 @@
 import { createApp } from '@backstage/app-defaults';
 import { AppRouter, FlatRoutes } from '@backstage/core-app-api';
 import { AlertDisplay, OAuthRequestDialog, SignInPage } from '@backstage/core-components';
-import { DevToolsPage } from '@backstage/plugin-devtools';
+import { CatalogEntityPage, CatalogIndexPage } from '@backstage/plugin-catalog';
 import { InfraWalletPage } from '@electrolux-oss/plugin-infrawallet';
-import { default as React } from 'react';
 import { Navigate, Route } from 'react-router-dom';
 import { apis } from './apis';
 import { Root } from './components/Root';
+import { entityPage } from './components/catalog/EntityPage';
 
 const app = createApp({
   apis,
@@ -18,8 +18,11 @@ const app = createApp({
 const routes = (
   <FlatRoutes>
     <Route path="/" element={<Navigate to="infrawallet" />} />
+    <Route path="/catalog" element={<CatalogIndexPage />} />
+    <Route path="/catalog/:namespace/:kind/:name" element={<CatalogEntityPage />}>
+      {entityPage}
+    </Route>
     <Route path="/infrawallet" element={<InfraWalletPage />} />
-    <Route path="/devtools" element={<DevToolsPage />} />
   </FlatRoutes>
 );
 

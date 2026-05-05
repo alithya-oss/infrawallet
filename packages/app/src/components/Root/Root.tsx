@@ -10,8 +10,8 @@ import {
 } from '@backstage/core-components';
 import { InfraWalletIcon } from '@electrolux-oss/plugin-infrawallet';
 import { styled } from '@mui/material/styles';
-import BuildIcon from '@mui/icons-material/Build';
-import { PropsWithChildren, default as React } from 'react';
+import CategoryIcon from '@mui/icons-material/Category';
+import { PropsWithChildren} from 'react';
 import LogoFull from './LogoFull';
 import LogoIcon from './LogoIcon';
 
@@ -46,10 +46,9 @@ export const Root = ({ children }: PropsWithChildren<{}>) => (
     <Sidebar>
       <SidebarLogo />
       <SidebarDivider />
+      <SidebarItem icon={CategoryIcon} to="catalog" text="Catalog" />
       <SidebarItem icon={InfraWalletIcon} to="infrawallet" text="InfraWallet" />
       <SidebarSpace />
-      <SidebarDivider />
-      <SidebarItem icon={BuildIcon} to="devtools" text="DevTools" />
     </Sidebar>
     {children}
   </SidebarPage>

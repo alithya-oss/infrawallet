@@ -22,7 +22,6 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import moment from 'moment';
-import { default as React } from 'react';
 import { infraWalletApiRef } from '../../api/InfraWalletApi';
 import { CustomCost } from '../../api/types';
 
