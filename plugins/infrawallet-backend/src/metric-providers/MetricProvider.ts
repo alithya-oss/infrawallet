@@ -91,11 +91,11 @@ export abstract class MetricProvider {
               });
             });
           } catch (e) {
-            this.logger.error(e);
+            this.logger.error(`${e}`);
             errors.push({
               provider: this.providerName,
-              name: `${this.providerName}/${configName}/${metric.getString('metricName')}`,
-              error: e.message,
+              name: `${this.providerName}/${configName}/${metric.metric_name}`,
+              error: (e as Error).message,
             });
           }
         })();

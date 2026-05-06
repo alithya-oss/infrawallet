@@ -1,4 +1,5 @@
 import { alertApiRef, useApi } from '@backstage/core-plugin-api';
+import React from 'react';
 import LibraryAddOutlinedIcon from '@mui/icons-material/LibraryAddOutlined';
 import Alert from '@mui/material/Alert';
 import Autocomplete from '@mui/material/Autocomplete';

@@ -148,7 +148,7 @@ export class DatadogClient extends InfraWalletClient {
             this.logger.warn(`Datadog historical cost response validation failed: ${error.message}`);
             this.logger.debug(`Sample validation errors: ${JSON.stringify(error.errors.slice(0, 3))}`);
           } else {
-            this.logger.warn(`Unexpected validation error: ${error.message}`);
+            this.logger.warn(`Unexpected validation error: ${(error as Error).message}`);
           }
         }
 
@@ -180,7 +180,7 @@ export class DatadogClient extends InfraWalletClient {
           this.logger.warn(`Datadog estimated cost response validation failed: ${error.message}`);
           this.logger.debug(`Sample validation errors: ${JSON.stringify(error.errors.slice(0, 3))}`);
         } else {
-          this.logger.warn(`Unexpected validation error: ${error.message}`);
+          this.logger.warn(`Unexpected validation error: ${(error as Error).message}`);
         }
       }
 
@@ -322,7 +322,7 @@ export class DatadogClient extends InfraWalletClient {
           forecastMap = await this.fetchForecastDetails(subAccountConfig);
           this.logger.debug(`Fetched forecast details for ${forecastMap.size} products`);
         } catch (error) {
-          this.logger.warn(`Failed to fetch forecast details: ${error.message}`);
+          this.logger.warn(`Failed to fetch forecast details: ${(error as Error).message}`);
         }
       }
     }

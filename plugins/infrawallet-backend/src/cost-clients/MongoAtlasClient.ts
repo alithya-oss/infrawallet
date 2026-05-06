@@ -70,7 +70,7 @@ export class MongoAtlasClient extends InfraWalletClient {
           this.logger.warn(`MongoDB Atlas invoices response validation failed: ${error.message}`);
           this.logger.debug(`Sample validation errors: ${JSON.stringify(error.errors.slice(0, 3))}`);
         } else {
-          this.logger.warn(`Unexpected validation error: ${error.message}`);
+          this.logger.warn(`Unexpected validation error: ${(error as Error).message}`);
         }
       }
 
@@ -119,7 +119,7 @@ export class MongoAtlasClient extends InfraWalletClient {
 
       return allInvoicesData.join('\n');
     } catch (error) {
-      this.logger.error(`Error fetching invoices from MongoDB Atlas: ${error.message}`);
+      this.logger.error(`Error fetching invoices from MongoDB Atlas: ${(error as Error).message}`);
       throw error;
     }
   }

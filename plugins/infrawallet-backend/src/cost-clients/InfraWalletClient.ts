@@ -177,11 +177,11 @@ export abstract class InfraWalletClient {
           }
           await setTagKeysToCache(this.cache, tagKeysCache, this.provider, integrationName, query);
         } catch (e) {
-          this.logger.error(e);
+          this.logger.error(`${e}`);
           errors.push({
             provider: this.provider,
             name: `${this.provider}/${integrationName}`,
-            error: e.message,
+            error: (e as Error).message,
           });
         }
       })();
@@ -242,11 +242,11 @@ export abstract class InfraWalletClient {
           }
           await setTagValuesToCache(this.cache, tagValuesCache, this.provider, integrationName, tagKey, query);
         } catch (e) {
-          this.logger.error(e);
+          this.logger.error(`${e}`);
           errors.push({
             provider: this.provider,
             name: `${this.provider}/${integrationName}`,
-            error: e.message,
+            error: (e as Error).message,
           });
         }
       })();
@@ -341,11 +341,11 @@ export abstract class InfraWalletClient {
           try {
             await this.processFreshData(integrationConfig, integrationName, query, results);
           } catch (e) {
-            this.logger.error(e);
+            this.logger.error(`${e}`);
             errors.push({
               provider: this.provider,
               name: `${this.provider}/${integrationName}`,
-              error: e.message,
+              error: (e as Error).message,
             });
           }
         })();
@@ -391,7 +391,7 @@ export abstract class InfraWalletClient {
         results.push(cost);
       });
     } catch (e) {
-      this.logger.error(e);
+      this.logger.error(`${e}`);
     }
 
     await bulkInsertCostItems(

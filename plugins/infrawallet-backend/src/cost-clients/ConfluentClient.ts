@@ -74,13 +74,13 @@ export class ConfluentClient extends InfraWalletClient {
         if (error instanceof ZodError) {
           this.logger.warn(`Confluent environment response validation failed: ${error.message}`);
         } else {
-          this.logger.warn(`Unexpected validation error: ${error.message}`);
+          this.logger.warn(`Unexpected validation error: ${(error as Error).message}`);
         }
       }
 
       return jsonResponse.display_name;
     } catch (error) {
-      this.logger.warn(`Error fetching environment name for ${envId}: ${error.message}`);
+      this.logger.warn(`Error fetching environment name for ${envId}: ${(error as Error).message}`);
       return envId;
     }
   }
@@ -141,7 +141,7 @@ export class ConfluentClient extends InfraWalletClient {
           this.logger.warn(`Confluent billing response validation failed: ${error.message}`);
           this.logger.debug(`Sample validation errors: ${JSON.stringify(error.errors.slice(0, 3))}`);
         } else {
-          this.logger.warn(`Unexpected validation error: ${error.message}`);
+          this.logger.warn(`Unexpected validation error: ${(error as Error).message}`);
         }
       }
 
@@ -150,7 +150,7 @@ export class ConfluentClient extends InfraWalletClient {
       if (retryCount < maxRetries) {
         // Apply exponential backoff for general errors
         const backoffTime = Math.min(60, Math.pow(2, retryCount) * 3);
-        this.logger.warn(`Error fetching costs, retrying in ${backoffTime} seconds: ${error.message}`);
+        this.logger.warn(`Error fetching costs, retrying in ${backoffTime} seconds: ${(error as Error).message}`);
         await new Promise(resolve => setTimeout(resolve, backoffTime * 1000));
         return this.fetchCostWithRetry(url, client, retryCount + 1, maxRetries);
       }
@@ -239,7 +239,7 @@ export class ConfluentClient extends InfraWalletClient {
                 const name = await this.fetchEnvDisplayName(client, envId);
                 envIdToName[envId] = name;
               } catch (error) {
-                this.logger.warn(`Error fetching name for environment ${envId}: ${error.message}`);
+                this.logger.warn(`Error fetching name for environment ${envId}: ${(error as Error).message}`);
                 envIdToName[envId] = envId; // Fallback to using the ID
               }
             }
@@ -263,7 +263,7 @@ export class ConfluentClient extends InfraWalletClient {
         monthlyRanges.pop();
       }
     } catch (error) {
-      this.logger.error(`Error testing Confluent API access: ${error.message}`);
+      this.logger.error(`Error testing Confluent API access: ${(error as Error).message}`);
     }
 
     // Process all remaining months in batches to respect rate limits
@@ -289,7 +289,7 @@ export class ConfluentClient extends InfraWalletClient {
               };
             } catch (error) {
               this.logger.error(
-                `Failed to fetch costs for ${range.start.format('YYYY-MM')} after multiple retries: ${error.message}`,
+                `Failed to fetch costs for ${range.start.format('YYYY-MM')} after multiple retries: ${(error as Error).message}`,
               );
               return {
                 month: range.start.format('YYYY-MM'),
@@ -320,7 +320,7 @@ export class ConfluentClient extends InfraWalletClient {
                   const name = await this.fetchEnvDisplayName(client, envId);
                   envIdToName[envId] = name;
                 } catch (error) {
-                  this.logger.warn(`Error fetching name for environment ${envId}: ${error.message}`);
+                  this.logger.warn(`Error fetching name for environment ${envId}: ${(error as Error).message}`);
                   envIdToName[envId] = envId; // Fallback to using the ID
                 }
               }
@@ -346,7 +346,7 @@ export class ConfluentClient extends InfraWalletClient {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } catch (error) {
-        this.logger.error(`Error processing batch of months: ${error.message}`);
+        this.logger.error(`Error processing batch of months: ${(error as Error).message}`);
       }
     }
 

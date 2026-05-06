@@ -47,7 +47,7 @@ export class CustomProviderClient extends InfraWalletClient {
           this.logger.warn(`Custom cost records validation failed: ${error.message}`);
           this.logger.debug(`Sample validation errors: ${JSON.stringify(error.errors.slice(0, 3))}`);
         } else {
-          this.logger.warn(`Unexpected validation error: ${error.message}`);
+          this.logger.warn(`Unexpected validation error: ${(error as Error).message}`);
         }
       }
     }
@@ -195,11 +195,11 @@ export class CustomProviderClient extends InfraWalletClient {
         results.push(value);
       });
     } catch (e) {
-      this.logger.error(e);
+      this.logger.error(`${e}`);
       errors.push({
         provider: this.provider,
         name: this.provider,
-        error: e.message,
+        error: (e as Error).message,
       });
     }
     return {
