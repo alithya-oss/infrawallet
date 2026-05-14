@@ -42,7 +42,7 @@ jest.mock('../service/consts', () => ({
 jest.mock('../service/CategoryMappingService', () => ({
   CategoryMappingService: {
     getInstance: () => ({
-      getCategoryByServiceName: (_provider: string, serviceName: string) =>
+      getCategoryByServiceName: (_provider: any, serviceName: any) =>
         `category-${serviceName}`,
     }),
     initInstance: jest.fn(),
@@ -73,37 +73,34 @@ jest.mock('../service/functions', () => ({
 }));
 
 import { KubecostClient } from './KubecostClient';
-import { CostQuery, Report } from '../service/types';
+import { CostQuery } from '../service/types';
 
 // ─── Test Helpers ────────────────────────────────────────────────────────────
 
 /**
  * Creates a testable KubecostClient instance by exposing protected methods.
  */
-class TestableKubecostClient extends KubecostClient {
-  public async callTransformCostsData(
-    subAccountConfig: Config,
-    query: CostQuery,
-    costResponse: any,
-  ): Promise<Report[]> {
-    return this.transformCostsData(subAccountConfig, query, costResponse);
-  }
-
-  public async callFetchCosts(
-    subAccountConfig: Config,
-    client: any,
-    query: CostQuery,
-  ): Promise<any> {
-    return this.fetchCosts(subAccountConfig, client, query);
-  }
+function createTestableClient(clientInstance: any) {
+  return {
+    callTransformCostsData: (subAccountConfig: Config, query: CostQuery, costResponse: any): Promise<any[]> =>
+      clientInstance.transformCostsData(subAccountConfig, query, costResponse),
+    callFetchCosts: (subAccountConfig: Config, client: any, query: CostQuery): Promise<any> =>
+      clientInstance.fetchCosts(subAccountConfig, client, query),
+    callInitCloudClient: (subAccountConfig: Config): Promise<any> =>
+      clientInstance.initCloudClient(subAccountConfig),
+  };
 }
+
+type TestableClient = ReturnType<typeof createTestableClient>;
 
 /** Creates a mock Config object with the given values */
 function createMockConfig(values: {
   name: string;
   baseUrl?: string;
+  apiVersion?: string;
   aggregate?: string;
   tags?: string[];
+  maxMetricsRetention?: { days?: number; hours?: number };
   filters?: Array<{ type: string; attribute: string; pattern: string }>;
 }): Config {
   const filterConfigs = (values.filters || []).map(f => ({
@@ -115,6 +112,22 @@ function createMockConfig(values: {
     },
   }));
 
+  const retentionConfig = values.maxMetricsRetention
+    ? {
+        has: () => true,
+        getOptionalNumber: (key: string) => {
+          if (key === 'days') return values.maxMetricsRetention?.days;
+          if (key === 'hours') return values.maxMetricsRetention?.hours;
+          return undefined;
+        },
+        getNumber: (key: string) => {
+          if (key === 'days') return values.maxMetricsRetention?.days ?? 0;
+          if (key === 'hours') return values.maxMetricsRetention?.hours ?? 0;
+          return 0;
+        },
+      }
+    : undefined;
+
   return {
     getString: (key: string) => {
       if (key === 'name') return values.name;
@@ -123,8 +136,10 @@ function createMockConfig(values: {
     },
     getOptionalString: (key: string) => {
       if (key === 'aggregate') return values.aggregate;
+      if (key === 'apiVersion') return values.apiVersion;
       return undefined;
     },
+    getOptionalNumber: (_key: string) => undefined,
     getOptionalStringArray: (key: string) => {
       if (key === 'tags') return values.tags;
       return undefined;
@@ -132,6 +147,14 @@ function createMockConfig(values: {
     getOptionalConfigArray: (key: string) => {
       if (key === 'filters') return filterConfigs.length > 0 ? filterConfigs : undefined;
       return undefined;
+    },
+    has: (key: string) => {
+      if (key === 'maxMetricsRetention') return !!values.maxMetricsRetention;
+      return false;
+    },
+    getConfig: (key: string) => {
+      if (key === 'maxMetricsRetention') return retentionConfig;
+      throw new Error(`Unknown config key: ${key}`);
     },
   } as unknown as Config;
 }
@@ -153,7 +176,7 @@ function createMockQuery(
 }
 
 /** Creates a testable client instance */
-function createTestClient(): TestableKubecostClient {
+function createTestClient(): TestableClient {
   const mockConfig = {
     getOptionalConfigArray: () => undefined,
     getOptionalString: () => undefined,
@@ -169,13 +192,8 @@ function createTestClient(): TestableKubecostClient {
     child: jest.fn().mockReturnThis(),
   } as any;
 
-  return new (TestableKubecostClient as any)(
-    'Kubecost',
-    mockConfig,
-    mockDatabase,
-    mockCache,
-    mockLogger,
-  ) as TestableKubecostClient;
+  const instance = KubecostClient.create(mockConfig, mockDatabase, mockCache, mockLogger);
+  return createTestableClient(instance);
 }
 
 // ─── Arbitrary Generators ────────────────────────────────────────────────────
@@ -232,6 +250,9 @@ const arbTag = fc
 /** Generates a list of tags */
 const arbTags = fc.array(arbTag, { minLength: 0, maxLength: 5 });
 
+/** Generates a valid API version */
+const arbApiVersion = fc.constantFrom('v1', 'v2', 'v3');
+
 // ─── Utility Functions ───────────────────────────────────────────────────────
 
 /** Escapes special regex characters in a string */
@@ -239,10 +260,364 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// ─── Unit Tests ──────────────────────────────────────────────────────────────
+
+describe('KubecostClient Unit Tests', () => {
+  let client: TestableClient;
+
+  beforeEach(() => {
+    client = createTestClient();
+  });
+
+  describe('initCloudClient', () => {
+    it('should extract baseUrl, name, and default apiVersion to v1', async () => {
+      const config = createMockConfig({ name: 'my-cluster', baseUrl: 'http://kubecost:9090' });
+      const result = await client.callInitCloudClient(config);
+      expect(result.baseUrl).toBe('http://kubecost:9090');
+      expect(result.name).toBe('my-cluster');
+      expect(result.apiVersion).toBe('v1');
+    });
+
+    it('should use configured apiVersion when provided', async () => {
+      for (const version of ['v1', 'v2', 'v3']) {
+        const config = createMockConfig({ name: 'test', baseUrl: 'http://host:9090', apiVersion: version });
+        const result = await client.callInitCloudClient(config);
+        expect(result.apiVersion).toBe(version);
+      }
+    });
+
+    it('should throw on invalid apiVersion', async () => {
+      const config = createMockConfig({ name: 'test', baseUrl: 'http://host:9090', apiVersion: 'invalid' });
+      await expect(client.callInitCloudClient(config)).rejects.toThrow(/invalid apiVersion/);
+    });
+  });
+
+  describe('fetchCosts - URL construction per API version', () => {
+    let originalFetch: typeof global.fetch;
+    let capturedUrl: string;
+
+    beforeEach(() => {
+      capturedUrl = '';
+      originalFetch = global.fetch;
+      global.fetch = jest.fn().mockImplementation(async (url: string) => {
+        capturedUrl = url;
+        return {
+          ok: true,
+          json: async () => ({ code: 200, data: [] }),
+        };
+      }) as any;
+    });
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it('should use /model/allocation with accumulate=true for v1 monthly', async () => {
+      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const now = Date.now();
+      const query = createMockQuery('monthly', (now - 3600000).toString(), now.toString());
+      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+
+      await client.callFetchCosts(config, httpClient, query);
+
+      expect(capturedUrl).toContain('/model/allocation?');
+      expect(capturedUrl).toContain('accumulate=true');
+      expect(capturedUrl).toContain('idle=false');
+    });
+
+    it('should use /model/allocation with accumulate=false for v1 daily', async () => {
+      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const now = Date.now();
+      const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
+      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+
+      await client.callFetchCosts(config, httpClient, query);
+
+      expect(capturedUrl).toContain('/model/allocation?');
+      expect(capturedUrl).toContain('accumulate=false');
+    });
+
+    it('should use /model/allocation with accumulate=month for v2 monthly', async () => {
+      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const now = Date.now();
+      const query = createMockQuery('monthly', (now - 3600000).toString(), now.toString());
+      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v2' as const };
+
+      await client.callFetchCosts(config, httpClient, query);
+
+      expect(capturedUrl).toContain('/model/allocation?');
+      expect(capturedUrl).toContain('accumulate=month');
+      expect(capturedUrl).toContain('idle=false');
+    });
+
+    it('should use /model/allocation with accumulate=day for v2 daily', async () => {
+      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const now = Date.now();
+      const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
+      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v2' as const };
+
+      await client.callFetchCosts(config, httpClient, query);
+
+      expect(capturedUrl).toContain('accumulate=day');
+    });
+
+    it('should use same URL pattern for v3 as v2', async () => {
+      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const now = Date.now();
+      const query = createMockQuery('monthly', (now - 3600000).toString(), now.toString());
+      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v3' as const };
+
+      await client.callFetchCosts(config, httpClient, query);
+
+      expect(capturedUrl).toContain('/model/allocation?');
+      expect(capturedUrl).toContain('accumulate=month');
+      expect(capturedUrl).toContain('idle=false');
+    });
+
+    it('should use namespace as default aggregate', async () => {
+      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const now = Date.now();
+      const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
+      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+
+      await client.callFetchCosts(config, httpClient, query);
+
+      expect(capturedUrl).toContain('aggregate=namespace');
+    });
+
+    it('should use configured aggregate value', async () => {
+      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090', aggregate: 'deployment' });
+      const now = Date.now();
+      const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
+      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+
+      await client.callFetchCosts(config, httpClient, query);
+
+      expect(capturedUrl).toContain('aggregate=deployment');
+    });
+  });
+
+  describe('fetchCosts - window parameter', () => {
+    let originalFetch: typeof global.fetch;
+    let capturedUrl: string;
+
+    beforeEach(() => {
+      capturedUrl = '';
+      originalFetch = global.fetch;
+      global.fetch = jest.fn().mockImplementation(async (url: string) => {
+        capturedUrl = url;
+        return {
+          ok: true,
+          json: async () => ({ code: 200, data: [] }),
+        };
+      }) as any;
+    });
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it('should format window as Unix timestamps', async () => {
+      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const now = Date.now();
+      const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
+      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+
+      await client.callFetchCosts(config, httpClient, query);
+
+      const urlObj = new URL(capturedUrl);
+      const windowParam = urlObj.searchParams.get('window')!;
+      const parts = windowParam.split(',');
+      expect(parts).toHaveLength(2);
+
+      // Both parts should be numeric Unix timestamps (seconds)
+      expect(Number(parts[0])).not.toBeNaN();
+      expect(Number(parts[1])).not.toBeNaN();
+      expect(Number(parts[0])).toBeLessThan(Number(parts[1]));
+    });
+
+    it('should clamp start time to retention window', async () => {
+      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      // Request data from 30 days ago (exceeds 15-day default retention)
+      const now = Date.now();
+      const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+      const query = createMockQuery('daily', thirtyDaysAgo.toString(), now.toString());
+      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+
+      await client.callFetchCosts(config, httpClient, query);
+
+      const urlObj = new URL(capturedUrl);
+      const windowParam = urlObj.searchParams.get('window')!;
+      const parts = windowParam.split(',');
+      const startTimestamp = Number(parts[0]);
+
+      // Start should be clamped: no older than (15 days - 1 hour buffer) ago
+      const maxRetentionSec = (15 * 24 - 1) * 3600; // 15 days minus 1 hour in seconds
+      const oldestAllowedSec = Math.floor(now / 1000) - maxRetentionSec;
+      // Allow 5 seconds tolerance for test execution time
+      expect(startTimestamp).toBeGreaterThanOrEqual(oldestAllowedSec - 5);
+      // Should not be the original 30 days ago
+      expect(startTimestamp).toBeGreaterThan(Math.floor(thirtyDaysAgo / 1000));
+    });
+  });
+
+  describe('fetchCosts - error handling', () => {
+    let originalFetch: typeof global.fetch;
+
+    beforeEach(() => {
+      originalFetch = global.fetch;
+    });
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it('should throw on HTTP error status', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        text: async () => 'Forbidden',
+      }) as any;
+
+      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const now = Date.now();
+      const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
+      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+
+      await expect(client.callFetchCosts(config, httpClient, query)).rejects.toThrow(/HTTP 403/);
+    });
+
+    it('should throw on API-level error code', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ code: 500, status: 'error', data: null }),
+      }) as any;
+
+      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const now = Date.now();
+      const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
+      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+
+      await expect(client.callFetchCosts(config, httpClient, query)).rejects.toThrow(/code 500/);
+    });
+
+    it('should not throw when code field is absent', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: [] }),
+      }) as any;
+
+      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const now = Date.now();
+      const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
+      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+
+      await expect(client.callFetchCosts(config, httpClient, query)).resolves.toBeDefined();
+    });
+  });
+
+  describe('transformCostsData - internal allocations', () => {
+    it('should skip __idle__ allocations', async () => {
+      const config = createMockConfig({ name: 'test' });
+      const query = createMockQuery('monthly');
+      const costResponse = {
+        code: 200,
+        data: [{
+          '__idle__': { name: '__idle__', totalCost: 100, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} },
+          'my-app': { name: 'my-app', totalCost: 50, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} },
+        }],
+      };
+
+      const reports = await client.callTransformCostsData(config, query, costResponse);
+      const services = reports.map(r => r.service);
+      expect(services).not.toContain('Kubecost/__idle__');
+      expect(services).toContain('Kubecost/my-app');
+    });
+
+    it('should skip __unallocated__ allocations', async () => {
+      const config = createMockConfig({ name: 'test' });
+      const query = createMockQuery('monthly');
+      const costResponse = {
+        code: 200,
+        data: [{
+          '__unallocated__': { name: '__unallocated__', totalCost: 100, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} },
+        }],
+      };
+
+      const reports = await client.callTransformCostsData(config, query, costResponse);
+      expect(reports).toHaveLength(0);
+    });
+  });
+
+  describe('transformCostsData - data normalization', () => {
+    it('should handle data as array (Kubecost format)', async () => {
+      const config = createMockConfig({ name: 'test' });
+      const query = createMockQuery('monthly');
+      const costResponse = {
+        code: 200,
+        data: [
+          { 'ns1': { totalCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} } },
+          { 'ns1': { totalCost: 20, start: '2024-02-15T00:00:00Z', end: '2024-03-01T00:00:00Z', properties: {} } },
+        ],
+      };
+
+      const reports = await client.callTransformCostsData(config, query, costResponse);
+      expect(reports.length).toBe(1);
+      expect(reports[0].reports['2024-01']).toBe(10);
+      expect(reports[0].reports['2024-02']).toBe(20);
+    });
+
+    it('should handle data as single object (non-array format)', async () => {
+      const config = createMockConfig({ name: 'test' });
+      const query = createMockQuery('monthly');
+      const costResponse = {
+        code: 200,
+        data: { 'ns1': { totalCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} } },
+      };
+
+      const reports = await client.callTransformCostsData(config, query, costResponse);
+      expect(reports.length).toBe(1);
+      expect(reports[0].reports['2024-01']).toBe(10);
+    });
+
+    it('should skip null entries in data array', async () => {
+      const config = createMockConfig({ name: 'test' });
+      const query = createMockQuery('monthly');
+      const costResponse = {
+        code: 200,
+        data: [
+          null,
+          { 'ns1': { totalCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} } },
+        ],
+      };
+
+      const reports = await client.callTransformCostsData(config, query, costResponse);
+      expect(reports.length).toBe(1);
+    });
+
+    it('should skip items with invalid start timestamps', async () => {
+      const config = createMockConfig({ name: 'test' });
+      const query = createMockQuery('monthly');
+      const costResponse = {
+        code: 200,
+        data: [{
+          'bad-ts': { totalCost: 10, start: 'not-a-date', end: '2024-02-01T00:00:00Z', properties: {} },
+          'good-ts': { totalCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} },
+        }],
+      };
+
+      const reports = await client.callTransformCostsData(config, query, costResponse);
+      const services = reports.map(r => r.service);
+      expect(services).not.toContain('Kubecost/bad-ts');
+      expect(services).toContain('Kubecost/good-ts');
+    });
+  });
+});
+
 // ─── Property-Based Tests ────────────────────────────────────────────────────
 
 describe('KubecostClient Property-Based Tests', () => {
-  let client: TestableKubecostClient;
+  let client: TestableClient;
 
   beforeEach(() => {
     client = createTestClient();
@@ -266,33 +641,21 @@ describe('KubecostClient Property-Based Tests', () => {
 
             const costResponse = {
               code: 200,
-              status: 'success',
               data: [{ [item.name]: item }],
             };
 
             const reports = await client.callTransformCostsData(config, query, costResponse);
 
-            // Should produce at least one report for a positive-cost item
             expect(reports.length).toBeGreaterThanOrEqual(1);
 
             const report = reports[0];
-
-            // Provider is 'Kubecost'
             expect(report.provider).toBe('Kubecost');
-
-            // Account is 'Kubecost/{instanceName}'
             expect(report.account).toBe(`Kubecost/${instanceName}`);
-
-            // Service is 'Kubecost/{allocationName}'
             expect(report.service).toBe(`Kubecost/${item.name}`);
-
-            // Category is populated (via mocked CategoryMappingService)
             expect(report.category).toBe(`category-${item.name}`);
-
-            // Provider type is INTEGRATION
             expect((report as any).providerType).toBe('Integration');
 
-            // All configured tags are present (last value wins for duplicate keys)
+            // All configured tags are present
             const expectedTags: Record<string, string> = {};
             for (const tag of tags) {
               const [k, v] = tag.split(':');
@@ -305,7 +668,7 @@ describe('KubecostClient Property-Based Tests', () => {
             }
 
             // Cost amount equals totalCost
-            const totalReportCost = Object.values(report.reports).reduce(
+            const totalReportCost = (Object.values(report.reports) as number[]).reduce(
               (sum, c) => sum + c,
               0,
             );
@@ -337,36 +700,14 @@ describe('KubecostClient Property-Based Tests', () => {
               timeWindowMap[name] = {
                 name,
                 properties: {},
-                cpuCost: 0,
-                gpuCost: 0,
-                ramCost: 0,
-                pvCost: 0,
-                networkCost: 0,
-                sharedCost: 0,
-                loadBalancerCost: 0,
                 totalCost: cost,
                 start: '2024-01-15T00:00:00Z',
                 end: '2024-02-01T00:00:00Z',
               };
             }
 
-            const costResponse = {
-              code: 200,
-              status: 'success',
-              data: [timeWindowMap],
-            };
-
+            const costResponse = { code: 200, data: [timeWindowMap] };
             const reports = await client.callTransformCostsData(config, query, costResponse);
-
-            // Verify only positive-cost items appear in reports
-            for (const report of reports) {
-              const allocationName = report.service.replace('Kubecost/', '');
-              const originalItem = items.find(([name]) => name === allocationName);
-              expect(originalItem).toBeDefined();
-              if (originalItem) {
-                expect(originalItem[1]).toBeGreaterThan(0);
-              }
-            }
 
             // No report should have a service name from a non-positive cost item
             const nonPositiveNames = items
@@ -394,12 +735,7 @@ describe('KubecostClient Property-Based Tests', () => {
           async (item, instanceName) => {
             const config = createMockConfig({ name: instanceName });
             const query = createMockQuery('monthly');
-
-            const costResponse = {
-              code: 200,
-              status: 'success',
-              data: [{ [item.name]: item }],
-            };
+            const costResponse = { code: 200, data: [{ [item.name]: item }] };
 
             const reports = await client.callTransformCostsData(config, query, costResponse);
 
@@ -422,12 +758,7 @@ describe('KubecostClient Property-Based Tests', () => {
           async (item, instanceName) => {
             const config = createMockConfig({ name: instanceName });
             const query = createMockQuery('daily');
-
-            const costResponse = {
-              code: 200,
-              status: 'success',
-              data: [{ [item.name]: item }],
-            };
+            const costResponse = { code: 200, data: [{ [item.name]: item }] };
 
             const reports = await client.callTransformCostsData(config, query, costResponse);
 
@@ -452,48 +783,24 @@ describe('KubecostClient Property-Based Tests', () => {
           fc.uniqueArray(arbAllocationName, { minLength: 2, maxLength: 10 }),
           arbInstanceName,
           async (names, instanceName) => {
-            // Pick the first name as the one to exclude
             const excludeName = names[0];
             const config = createMockConfig({
               name: instanceName,
-              filters: [
-                {
-                  type: 'exclude',
-                  attribute: 'name',
-                  pattern: `^${escapeRegex(excludeName)}$`,
-                },
-              ],
+              filters: [{ type: 'exclude', attribute: 'name', pattern: `^${escapeRegex(excludeName)}$` }],
             });
             const query = createMockQuery('monthly');
 
             const timeWindowMap: Record<string, any> = {};
             for (const name of names) {
               timeWindowMap[name] = {
-                name,
-                properties: {},
-                cpuCost: 1,
-                gpuCost: 0,
-                ramCost: 1,
-                pvCost: 0,
-                networkCost: 0,
-                sharedCost: 0,
-                loadBalancerCost: 0,
-                totalCost: 10,
-                start: '2024-01-15T00:00:00Z',
-                end: '2024-02-01T00:00:00Z',
+                name, properties: {}, totalCost: 10,
+                start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z',
               };
             }
 
-            const costResponse = {
-              code: 200,
-              status: 'success',
-              data: [timeWindowMap],
-            };
-
+            const costResponse = { code: 200, data: [timeWindowMap] };
             const reports = await client.callTransformCostsData(config, query, costResponse);
             const reportServiceNames = reports.map(r => r.service);
-
-            // The excluded name should not appear
             expect(reportServiceNames).not.toContain(`Kubecost/${excludeName}`);
           },
         ),
@@ -507,50 +814,26 @@ describe('KubecostClient Property-Based Tests', () => {
           fc.uniqueArray(arbAllocationName, { minLength: 2, maxLength: 10 }),
           arbInstanceName,
           async (names, instanceName) => {
-            // Pick the first name as the one to include
             const includeName = names[0];
             const config = createMockConfig({
               name: instanceName,
-              filters: [
-                {
-                  type: 'include',
-                  attribute: 'name',
-                  pattern: `^${escapeRegex(includeName)}$`,
-                },
-              ],
+              filters: [{ type: 'include', attribute: 'name', pattern: `^${escapeRegex(includeName)}$` }],
             });
             const query = createMockQuery('monthly');
 
             const timeWindowMap: Record<string, any> = {};
             for (const name of names) {
               timeWindowMap[name] = {
-                name,
-                properties: {},
-                cpuCost: 1,
-                gpuCost: 0,
-                ramCost: 1,
-                pvCost: 0,
-                networkCost: 0,
-                sharedCost: 0,
-                loadBalancerCost: 0,
-                totalCost: 10,
-                start: '2024-01-15T00:00:00Z',
-                end: '2024-02-01T00:00:00Z',
+                name, properties: {}, totalCost: 10,
+                start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z',
               };
             }
 
-            const costResponse = {
-              code: 200,
-              status: 'success',
-              data: [timeWindowMap],
-            };
-
+            const costResponse = { code: 200, data: [timeWindowMap] };
             const reports = await client.callTransformCostsData(config, query, costResponse);
 
-            // Only the included name should appear
             for (const report of reports) {
-              const allocationName = report.service.replace('Kubecost/', '');
-              expect(allocationName).toBe(includeName);
+              expect(report.service.replace('Kubecost/', '')).toBe(includeName);
             }
           },
         ),
@@ -561,41 +844,31 @@ describe('KubecostClient Property-Based Tests', () => {
 
   // ─── Property 5: Window parameter formatting ───────────────────────────────
 
-  describe('Property 5: Window parameter formatting', () => {
-    it('should construct a window parameter with two valid ISO 8601 date strings separated by a comma', async () => {
+  describe('Property 5: Window parameter uses Unix timestamps', () => {
+    it('should construct a window parameter with two Unix timestamps separated by a comma', async () => {
       await fc.assert(
         fc.asyncProperty(
-          fc.integer({ min: 1577836800000, max: 1767225600000 }), // 2020-01-01 to 2025-12-31
-          fc.integer({ min: 1577836800000, max: 1767225600000 }),
-          async (startMs, endMs) => {
-            // Ensure start < end
-            const [start, end] =
-              startMs < endMs ? [startMs, endMs] : [endMs, startMs];
-            if (start === end) return; // skip degenerate case
+          // Use recent timestamps within the retention window to avoid clamping
+          fc.integer({ min: Math.floor(Date.now() / 1000) - 12 * 3600, max: Math.floor(Date.now() / 1000) - 3600 }),
+          fc.integer({ min: Math.floor(Date.now() / 1000) - 3600, max: Math.floor(Date.now() / 1000) }),
+          arbApiVersion,
+          async (startSec, endSec, apiVersion) => {
+            if (startSec >= endSec) return;
 
-            // Capture the URL that fetch would be called with
             let capturedUrl = '';
-            const mockFetch = jest.fn().mockImplementation(async (url: string) => {
-              capturedUrl = url;
-              return {
-                ok: true,
-                json: async () => ({ code: 200, status: 'success', data: [] }),
-              };
-            });
             const originalFetch = global.fetch;
-            global.fetch = mockFetch as any;
+            global.fetch = jest.fn().mockImplementation(async (url: string) => {
+              capturedUrl = url;
+              return { ok: true, json: async () => ({ code: 200, data: [] }) };
+            }) as any;
 
             try {
-              const config = createMockConfig({
-                name: 'test',
-                baseUrl: 'http://localhost:9090',
-              });
-              const query = createMockQuery('monthly', start.toString(), end.toString());
-              const httpClient = { baseUrl: 'http://localhost:9090', name: 'test' };
+              const config = createMockConfig({ name: 'test', baseUrl: 'http://localhost:9090' });
+              const query = createMockQuery('monthly', (startSec * 1000).toString(), (endSec * 1000).toString());
+              const httpClient = { baseUrl: 'http://localhost:9090', name: 'test', apiVersion };
 
               await client.callFetchCosts(config, httpClient, query);
 
-              // Extract the window parameter from the captured URL
               const urlObj = new URL(capturedUrl);
               const windowParam = urlObj.searchParams.get('window');
               expect(windowParam).toBeDefined();
@@ -603,16 +876,15 @@ describe('KubecostClient Property-Based Tests', () => {
               const parts = windowParam!.split(',');
               expect(parts).toHaveLength(2);
 
-              // Both parts should be valid ISO 8601 date strings (YYYY-MM-DD format)
-              const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
-              expect(parts[0]).toMatch(isoDateRegex);
-              expect(parts[1]).toMatch(isoDateRegex);
-
-              // Both should parse to valid dates
-              const startDate = new Date(parts[0]);
-              const endDate = new Date(parts[1]);
-              expect(startDate.getTime()).not.toBeNaN();
-              expect(endDate.getTime()).not.toBeNaN();
+              // Both parts should be valid numeric Unix timestamps (seconds)
+              const parsedStart = Number(parts[0]);
+              const parsedEnd = Number(parts[1]);
+              expect(parsedStart).not.toBeNaN();
+              expect(parsedEnd).not.toBeNaN();
+              expect(parsedStart).toBeLessThanOrEqual(parsedEnd);
+              // Timestamps should be in seconds (not milliseconds)
+              expect(parsedStart).toBeLessThan(2000000000);
+              expect(parsedEnd).toBeLessThan(2000000000);
             } finally {
               global.fetch = originalFetch;
             }

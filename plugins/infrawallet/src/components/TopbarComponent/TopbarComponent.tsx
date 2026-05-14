@@ -11,7 +11,7 @@ import { useTheme } from '@mui/material/styles';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { addMonths, endOfMonth, startOfMonth } from 'date-fns';
+import { addMonths, endOfMonth, startOfMonth, subWeeks, startOfDay, endOfDay } from 'date-fns';
 import { FC } from 'react';
 import { TopbarComponentProps } from '../types';
 
@@ -27,6 +27,13 @@ export const TopbarComponent: FC<TopbarComponentProps> = ({
     monthRangeSetter({
       startMonth: startOfMonth(addMonths(new Date(), lastXMonth * -1)),
       endMonth: endOfMonth(new Date()),
+    });
+  };
+
+  const setPreDefinedWeekRange = (weeks: number) => {
+    monthRangeSetter({
+      startMonth: startOfDay(subWeeks(new Date(), weeks)),
+      endMonth: endOfDay(new Date()),
     });
   };
 
@@ -95,6 +102,7 @@ export const TopbarComponent: FC<TopbarComponentProps> = ({
       <FormControl sx={{ marginLeft: theme.spacing(1), marginRight: theme.spacing(3), minWidth: 120 }}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
+            <Chip label="Last 2 Weeks" onClick={() => setPreDefinedWeekRange(2)} />
             <Chip label="Last 3 Months" onClick={() => setPreDefinedMonthRange(2)} />
             <Chip label="Last 6 Months" onClick={() => setPreDefinedMonthRange(5)} />
             <Chip label="Last 12 Months" onClick={() => setPreDefinedMonthRange(11)} />

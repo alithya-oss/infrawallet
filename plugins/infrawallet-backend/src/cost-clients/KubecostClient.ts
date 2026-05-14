@@ -1,5 +1,7 @@
 import { CacheService, DatabaseService, LoggerService } from '@backstage/backend-plugin-api';
-import { Config } from '@backstage/config';
+import { Config, readDurationFromConfig } from '@backstage/config';
+import { durationToMilliseconds, HumanDuration } from '@backstage/types';
+import { DateTime } from 'luxon';
 import { CostQuery, Report } from '../service/types';
 import { InfraWalletClient } from './InfraWalletClient';
 import { CategoryMappingService } from '../service/CategoryMappingService';
@@ -7,9 +9,18 @@ import { CLOUD_PROVIDER, GRANULARITY, PROVIDER_TYPE } from '../service/consts';
 import { KubecostAllocationResponseSchema } from '../schemas/KubecostBilling';
 import { ZodError } from 'zod';
 
+/**
+ * Supported API versions:
+ * - 'v1': Kubecost 1.x (endpoint: /model/allocation, accumulate as boolean)
+ * - 'v2': Kubecost 2.x (endpoint: /model/allocation, accumulate as string, v2 filter support)
+ * - 'v3': Kubecost 3.x (same API as v2, endpoint: /model/allocation)
+ */
+type KubecostApiVersion = 'v1' | 'v2' | 'v3';
+
 interface KubecostHttpClient {
   baseUrl: string;
   name: string;
+  apiVersion: KubecostApiVersion;
 }
 
 export class KubecostClient extends InfraWalletClient {
@@ -24,21 +35,82 @@ export class KubecostClient extends InfraWalletClient {
   protected async initCloudClient(subAccountConfig: Config): Promise<KubecostHttpClient> {
     const baseUrl = subAccountConfig.getString('baseUrl');
     const name = subAccountConfig.getString('name');
+    const apiVersion = (subAccountConfig.getOptionalString('apiVersion') || 'v1') as KubecostApiVersion;
 
-    return { baseUrl, name };
+    if (!['v1', 'v2', 'v3'].includes(apiVersion)) {
+      throw new Error(
+        `Kubecost: invalid apiVersion "${apiVersion}" for instance "${name}". Must be one of: v1, v2, v3`,
+      );
+    }
+
+    return { baseUrl, name, apiVersion };
+  }
+
+  /**
+   * Builds the allocation API URL based on the API version.
+   */
+  private buildAllocationUrl(
+    client: KubecostHttpClient,
+    window: string,
+    aggregate: string,
+    query: CostQuery,
+  ): string {
+    const params = new URLSearchParams();
+    params.set('window', window);
+    params.set('aggregate', aggregate);
+
+    switch (client.apiVersion) {
+      case 'v1': {
+        // Kubecost v1.x uses /model/allocation with accumulate as boolean
+        // see: https://www.ibm.com/docs/en/kubecost/self-hosted/1.x?topic=directory-allocation-api
+        const accumulate = query.granularity === GRANULARITY.MONTHLY ? 'true' : 'false';
+        params.set('accumulate', accumulate);
+        params.set('idle', 'false');
+        return `${client.baseUrl}/model/allocation?${params.toString()}`;
+      }
+      case 'v2':
+      case 'v3': {
+        // Kubecost v2.x/v3.x uses /model/allocation with accumulate as string duration
+        // see: https://www.ibm.com/docs/en/kubecost/self-hosted/2.x?topic=apis-allocation-api
+        const accumulate = query.granularity === GRANULARITY.MONTHLY ? 'month' : 'day';
+        params.set('accumulate', accumulate);
+        params.set('idle', 'false');
+        return `${client.baseUrl}/model/allocation?${params.toString()}`;
+      }
+      default:
+        throw new Error(`Unsupported apiVersion: ${client.apiVersion}`);
+    }
   }
 
   protected async fetchCosts(subAccountConfig: Config, client: KubecostHttpClient, query: CostQuery): Promise<any> {
-    const startDate = new Date(parseInt(query.startTime, 10)).toISOString().split('T')[0];
-    const endDate = new Date(parseInt(query.endTime, 10)).toISOString().split('T')[0];
-    const window = `${startDate},${endDate}`;
+    let startDate = DateTime.fromMillis(parseInt(query.startTime, 10), { zone: 'utc' });
+    const endDate = DateTime.fromMillis(parseInt(query.endTime, 10), { zone: 'utc' });
 
+    // Kubecost free tier only retains 15 days (360h) of data.
+    // Clamp the start time so we don't request beyond the retention window.
+    // Subtract a 1-hour buffer to account for clock drift and request latency.
+    // see: https://www.ibm.com/docs/en/kubecost/self-hosted/2.x?topic=overview-opencost-product-comparison
+    const defaultRetention: HumanDuration = { days: 15 };
+    const maxRetention = subAccountConfig.has('maxMetricsRetention')
+      ? readDurationFromConfig(subAccountConfig, { key: 'maxMetricsRetention' })
+      : defaultRetention;
+    const maxRetentionMs = durationToMilliseconds(maxRetention);
+    const bufferMs = durationToMilliseconds({ hours: 1 });
+    const oldestAllowed = DateTime.utc().minus(maxRetentionMs - bufferMs);
+
+    if (startDate < oldestAllowed) {
+      this.logger.info(
+        `Kubecost: clamping start time from ${startDate.toISO()} to ${oldestAllowed.toISO()} (retention: ${maxRetentionMs / 3600000}h)`,
+      );
+      startDate = oldestAllowed;
+    }
+
+    const window = `${Math.floor(startDate.toSeconds())},${Math.floor(endDate.toSeconds())}`;
     const aggregate = subAccountConfig.getOptionalString('aggregate') || 'namespace';
-    const accumulate = query.granularity === GRANULARITY.MONTHLY ? 'true' : 'false';
 
-    const url = `${client.baseUrl}/model/allocation?window=${encodeURIComponent(window)}&aggregate=${encodeURIComponent(aggregate)}&accumulate=${accumulate}`;
+    const url = this.buildAllocationUrl(client, window, aggregate, query);
 
-    this.logger.debug(`Fetching Kubecost costs from URL: ${url}`);
+    this.logger.debug(`Fetching Kubecost costs from URL: ${url} (apiVersion: ${client.apiVersion})`);
 
     const response = await fetch(url, { method: 'GET' });
 
@@ -63,8 +135,8 @@ export class KubecostClient extends InfraWalletClient {
       }
     }
 
-    // Throw if API-level error code
-    if (jsonResponse.code !== 200) {
+    // Throw if API-level error code (Kubecost returns code: 200 on success)
+    if (jsonResponse.code !== undefined && jsonResponse.code !== 200) {
       throw new Error(
         `Kubecost API error for ${client.name}: code ${jsonResponse.code}, status: ${jsonResponse.status}`,
       );
@@ -92,59 +164,84 @@ export class KubecostClient extends InfraWalletClient {
       }
     });
 
-    if (!costResponse || !costResponse.data || !Array.isArray(costResponse.data)) {
+    if (!costResponse || !costResponse.data) {
       this.logger.warn('No valid Kubecost cost data to transform');
       return [];
     }
 
+    // Normalize data: ensure it's always an array of maps
+    const dataArray: Array<Record<string, any>> = Array.isArray(costResponse.data)
+      ? costResponse.data
+      : [costResponse.data];
+
+    this.logger.debug(`Kubecost: processing ${dataArray.length} time window(s)`);
+
     const transformedData: { [key: string]: Report } = {};
 
-    for (const timeWindowMap of costResponse.data) {
+    for (const timeWindowMap of dataArray) {
+      if (!timeWindowMap || typeof timeWindowMap !== 'object') {
+        continue;
+      }
       for (const [allocationName, allocationItem] of Object.entries(timeWindowMap)) {
-        const item = allocationItem as any;
+        try {
+          const item = allocationItem as any;
 
-        // Exclude items with zero or negative totalCost
-        if (!item.totalCost || item.totalCost <= 0) {
-          continue;
+          // Skip if item is null or not an object
+          if (!item || typeof item !== 'object' || Array.isArray(item)) {
+            continue;
+          }
+
+          // Exclude items with zero or negative totalCost
+          if (!item.totalCost || item.totalCost <= 0) {
+            continue;
+          }
+
+          // Skip Kubecost internal allocations (e.g. __idle__, __unallocated__)
+          if (allocationName.startsWith('__') && allocationName.endsWith('__')) {
+            continue;
+          }
+
+          // Apply filter evaluation
+          if (!this.evaluateIntegrationFilters(allocationName, integrationConfig)) {
+            continue;
+          }
+
+          // Derive period key from the allocation item's start timestamp
+          const itemStart = DateTime.fromISO(item.start, { zone: 'utc' });
+          if (!itemStart.isValid) {
+            this.logger.debug(`Kubecost: skipping allocation "${allocationName}" with invalid start timestamp`);
+            continue;
+          }
+          let periodKey: string;
+          if (query.granularity === GRANULARITY.MONTHLY) {
+            periodKey = itemStart.toFormat('yyyy-MM');
+          } else {
+            periodKey = itemStart.toFormat('yyyy-MM-dd');
+          }
+
+          const category = categoryMappingService.getCategoryByServiceName(this.provider, allocationName);
+          const keyName = `${instanceName}->${category}->${allocationName}`;
+
+          if (!transformedData[keyName]) {
+            transformedData[keyName] = {
+              id: keyName,
+              account: `Kubecost/${instanceName}`,
+              service: `Kubecost/${allocationName}`,
+              category: category,
+              provider: this.provider,
+              providerType: PROVIDER_TYPE.INTEGRATION,
+              ...tagKeyValues,
+              reports: {},
+            };
+          }
+
+          transformedData[keyName].reports[periodKey] =
+            (transformedData[keyName].reports[periodKey] || 0) + item.totalCost;
+        } catch (err) {
+          this.logger.warn(
+            `Kubecost: error processing allocation "${allocationName}": ${(err as Error).message}`,
+          );
         }
-
-        // Apply filter evaluation
-        if (!this.evaluateIntegrationFilters(allocationName, integrationConfig)) {
-          continue;
-        }
-
-        // Derive period key from the allocation item's start timestamp
-        const startTimestamp = new Date(item.start);
-        let periodKey: string;
-        if (query.granularity === GRANULARITY.MONTHLY) {
-          const year = startTimestamp.getUTCFullYear();
-          const month = String(startTimestamp.getUTCMonth() + 1).padStart(2, '0');
-          periodKey = `${year}-${month}`;
-        } else {
-          const year = startTimestamp.getUTCFullYear();
-          const month = String(startTimestamp.getUTCMonth() + 1).padStart(2, '0');
-          const day = String(startTimestamp.getUTCDate()).padStart(2, '0');
-          periodKey = `${year}-${month}-${day}`;
-        }
-
-        const category = categoryMappingService.getCategoryByServiceName(this.provider, allocationName);
-        const keyName = `${instanceName}->${category}->${allocationName}`;
-
-        if (!transformedData[keyName]) {
-          transformedData[keyName] = {
-            id: keyName,
-            account: `Kubecost/${instanceName}`,
-            service: `Kubecost/${allocationName}`,
-            category: category,
-            provider: this.provider,
-            providerType: PROVIDER_TYPE.INTEGRATION,
-            reports: {},
-            ...tagKeyValues,
-          };
-        }
-
-        transformedData[keyName].reports[periodKey] =
-          (transformedData[keyName].reports[periodKey] || 0) + item.totalCost;
       }
     }
 

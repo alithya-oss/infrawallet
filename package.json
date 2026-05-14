@@ -3,11 +3,11 @@
   "version": "0.1.8",
   "private": true,
   "engines": {
-    "node": "18 || 20"
+    "node": "22 || 24"
   },
   "scripts": {
     "dev": "concurrently \"yarn start\" \"yarn start-backend\"",
-    "start": "yarn workspace app start",
+    "start": "yarn backstage-cli repo start",
     "start-backend": "yarn workspace backend start",
     "build:backend": "yarn workspace backend build",
     "build:all": "backstage-cli repo build --all",
@@ -50,8 +50,8 @@
     "jest": "^30",
     "jsdom": "^27",
     "lint-staged": "^13.0.0",
-    "node-gyp": "^9.0.0",
-    "prettier": "^3.3.3",
+    "node-gyp": "^10.0.0",
+    "prettier": "^2.3.2",
     "typescript": "~5.6.0"
   },
   "resolutions": {

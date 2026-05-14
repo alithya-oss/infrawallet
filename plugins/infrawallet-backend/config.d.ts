@@ -1,3 +1,5 @@
+import { HumanDuration } from '@backstage/types';
+
 export interface Config {
   backend: {
     infraWallet: {
@@ -125,7 +127,21 @@ export interface Config {
         kubecost?: {
           name: string;
           baseUrl: string;
+          /**
+           * API version to use for the Kubecost endpoint.
+           * - 'v1': Kubecost 1.x (endpoint: /model/allocation, accumulate as boolean)
+           * - 'v2': Kubecost 2.x (endpoint: /model/allocation, accumulate as string)
+           * - 'v3': Kubecost 3.x (same API as v2)
+           * @default 'v1'
+           */
+          apiVersion?: 'v1' | 'v2' | 'v3';
           aggregate?: string;
+          /**
+           * Maximum metrics retention window. Kubecost free tier retains 15 days.
+           * Accepts HumanDuration format, e.g. { days: 15 }, { hours: 360 }.
+           * @default { days: 15 }
+           */
+          maxMetricsRetention?: HumanDuration;
           tags?: string[];
           filters?: [
             {
