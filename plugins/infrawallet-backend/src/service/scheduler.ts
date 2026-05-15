@@ -1,6 +1,5 @@
-import { CacheService, DatabaseService, SchedulerService } from '@backstage/backend-plugin-api';
+import { CacheService, DatabaseService, SchedulerService,LoggerService } from '@backstage/backend-plugin-api';
 import { Config } from '@backstage/config';
-import { Logger } from 'winston';
 import { fetchAndSaveCosts } from '../tasks/fetchAndSaveCosts';
 import { RouterOptions } from './types';
 
@@ -9,14 +8,14 @@ import { RouterOptions } from './types';
  */
 export class CostFetchTaskScheduler {
   private readonly scheduler: SchedulerService;
-  private readonly logger: Logger;
+  private readonly logger: LoggerService;
   private readonly config: Config;
   private readonly database: DatabaseService;
   private readonly cache: CacheService;
 
   constructor(options: {
     scheduler: SchedulerService;
-    logger: Logger;
+    logger: LoggerService;
     config: Config;
     database: DatabaseService;
     cache: CacheService;
