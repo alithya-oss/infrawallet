@@ -1,7 +1,6 @@
 import { CacheService, DatabaseService, LoggerService } from '@backstage/backend-plugin-api';
 import { Config } from '@backstage/config';
 import moment from 'moment';
-import fetch from 'node-fetch';
 import { MetricProvider } from './MetricProvider';
 import { Metric, MetricQuery } from '../service/types';
 

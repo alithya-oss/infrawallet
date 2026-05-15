@@ -4171,7 +4171,6 @@ __metadata:
     luxon: "npm:^3.7.2"
     moment: "npm:2.30.1"
     msw: "npm:^1.0.0"
-    node-fetch: "npm:^2.6.7"
     supertest: "npm:^6.2.4"
     upath: "npm:^2.0.1"
     urllib: "npm:^4.9.0"
@@ -4205,7 +4204,6 @@ __metadata:
     "@testing-library/user-event": "npm:^14.0.0"
     "@types/lodash": "npm:^4.14.151"
     "@types/lucene": "npm:^2"
-    "@types/node-fetch": "npm:^2.6.4"
     "@types/react": "npm:^18"
     "@types/react-date-range": "npm:1.4.5"
     "@types/uuid": "npm:10.0.0"
@@ -4215,7 +4213,6 @@ __metadata:
     moment: "npm:2.30.1"
     msw: "npm:^1.0.0"
     mui-modal-provider: "npm:2.2.0"
-    node-fetch: "npm:^2.6.7"
     react-icons: "npm:^5.5.0"
     recharts: "npm:^2.12.7"
     uuid: "npm:10.0.0"
@@ -11801,16 +11798,6 @@ __metadata:
   dependencies:
     "@types/node": "npm:*"
   checksum: 10/af8d83ad7b68ea05d9357985daf81b6c9b73af4feacb2f5c2693c7fd3e13e5135ef1bd083ce8d5bdc8e97acd28563b61bb32dec4e4508a8067fcd31b8a098632
-  languageName: node
-  linkType: hard
-
-"@types/node-fetch@npm:^2.6.4":
-  version: 2.6.13
-  resolution: "@types/node-fetch@npm:2.6.13"
-  dependencies:
-    "@types/node": "npm:*"
-    form-data: "npm:^4.0.4"
-  checksum: 10/944d52214791ebba482ca1393a4f0d62b0dbac5f7343ff42c128b75d5356d8bcefd4df77771b55c1acd19d118e16e9bd5d2792819c51bc13402d1c87c0975435
   languageName: node
   linkType: hard
 
