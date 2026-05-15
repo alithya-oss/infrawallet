@@ -135,6 +135,12 @@ export interface Config {
            * @default 'v1'
            */
           apiVersion?: 'v1' | 'v2' | 'v3';
+          /**
+           * Field by which to aggregate the results.
+           * Accepts: cluster, namespace, controllerKind, controller, service, node, pod, label:<name>, and annotation:<name>.
+           * Also accepts comma-separated lists for multi-aggregation, like namespace,label:app.
+           * * @default 'namespace'
+           */
           aggregate?: string;
           /**
            * Maximum metrics retention window. Kubecost free tier retains 15 days.

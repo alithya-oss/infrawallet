@@ -99,6 +99,7 @@ export class CategoryMappingService {
       }
     }
 
+    this.serviceToCategory[providerLowerCase] = this.serviceToCategory[providerLowerCase] || {};
     this.serviceToCategory[providerLowerCase][serviceName] = result;
     this.logger.debug(`serviceToCategoryMappings updated: ${providerLowerCase}/${serviceName} -> ${result}`);
 
