@@ -1,7 +1,4 @@
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
+
 exports.up = async function up(knex) {
   await knex.schema.createTable('budgets', table => {
     table.comment('Wallet budgets');

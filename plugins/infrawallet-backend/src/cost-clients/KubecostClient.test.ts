@@ -42,8 +42,7 @@ jest.mock('../service/consts', () => ({
 jest.mock('../service/CategoryMappingService', () => ({
   CategoryMappingService: {
     getInstance: () => ({
-      getCategoryByServiceName: (_provider: any, serviceName: any) =>
-        `category-${serviceName}`,
+      getCategoryByServiceName: (_provider: any, serviceName: any) => `category-${serviceName}`,
     }),
     initInstance: jest.fn(),
   },
@@ -86,8 +85,7 @@ function createTestableClient(clientInstance: any) {
       clientInstance.transformCostsData(subAccountConfig, query, costResponse),
     callFetchCosts: (subAccountConfig: Config, client: any, query: CostQuery): Promise<any> =>
       clientInstance.fetchCosts(subAccountConfig, client, query),
-    callInitCloudClient: (subAccountConfig: Config): Promise<any> =>
-      clientInstance.initCloudClient(subAccountConfig),
+    callInitCloudClient: (subAccountConfig: Config): Promise<any> => clientInstance.initCloudClient(subAccountConfig),
   };
 }
 
@@ -160,11 +158,7 @@ function createMockConfig(values: {
 }
 
 /** Creates a mock CostQuery */
-function createMockQuery(
-  granularity: 'daily' | 'monthly',
-  startTime?: string,
-  endTime?: string,
-): CostQuery {
+function createMockQuery(granularity: 'daily' | 'monthly', startTime?: string, endTime?: string): CostQuery {
   return {
     filters: '',
     tags: '',
@@ -208,10 +202,7 @@ const arbInstanceName = fc.stringMatching(/^[a-z][a-z0-9-]{0,20}$/);
 const arbPositiveCost = fc.double({ min: 0.01, max: 100000, noNaN: true });
 
 /** Generates a non-positive cost value (zero or negative) */
-const arbNonPositiveCost = fc.oneof(
-  fc.constant(0),
-  fc.double({ min: -100000, max: -0.01, noNaN: true }),
-);
+const arbNonPositiveCost = fc.oneof(fc.constant(0), fc.double({ min: -100000, max: -0.01, noNaN: true }));
 
 /** Generates a valid ISO timestamp string */
 const arbTimestamp = fc
@@ -241,10 +232,7 @@ function arbAllocationItem(totalCost: fc.Arbitrary<number>) {
 
 /** Generates tag strings in "key:value" format */
 const arbTag = fc
-  .tuple(
-    fc.stringMatching(/^[a-z]{1,10}$/),
-    fc.stringMatching(/^[a-z0-9]{1,10}$/),
-  )
+  .tuple(fc.stringMatching(/^[a-z]{1,10}$/), fc.stringMatching(/^[a-z0-9]{1,10}$/))
   .map(([k, v]) => `${k}:${v}`);
 
 /** Generates a list of tags */
@@ -522,10 +510,24 @@ describe('KubecostClient Unit Tests', () => {
       const query = createMockQuery('monthly');
       const costResponse = {
         code: 200,
-        data: [{
-          '__idle__': { name: '__idle__', totalCost: 100, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} },
-          'my-app': { name: 'my-app', totalCost: 50, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} },
-        }],
+        data: [
+          {
+            __idle__: {
+              name: '__idle__',
+              totalCost: 100,
+              start: '2024-01-15T00:00:00Z',
+              end: '2024-02-01T00:00:00Z',
+              properties: {},
+            },
+            'my-app': {
+              name: 'my-app',
+              totalCost: 50,
+              start: '2024-01-15T00:00:00Z',
+              end: '2024-02-01T00:00:00Z',
+              properties: {},
+            },
+          },
+        ],
       };
 
       const reports = await client.callTransformCostsData(config, query, costResponse);
@@ -539,9 +541,17 @@ describe('KubecostClient Unit Tests', () => {
       const query = createMockQuery('monthly');
       const costResponse = {
         code: 200,
-        data: [{
-          '__unallocated__': { name: '__unallocated__', totalCost: 100, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} },
-        }],
+        data: [
+          {
+            __unallocated__: {
+              name: '__unallocated__',
+              totalCost: 100,
+              start: '2024-01-15T00:00:00Z',
+              end: '2024-02-01T00:00:00Z',
+              properties: {},
+            },
+          },
+        ],
       };
 
       const reports = await client.callTransformCostsData(config, query, costResponse);
@@ -556,8 +566,8 @@ describe('KubecostClient Unit Tests', () => {
       const costResponse = {
         code: 200,
         data: [
-          { 'ns1': { totalCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} } },
-          { 'ns1': { totalCost: 20, start: '2024-02-15T00:00:00Z', end: '2024-03-01T00:00:00Z', properties: {} } },
+          { ns1: { totalCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} } },
+          { ns1: { totalCost: 20, start: '2024-02-15T00:00:00Z', end: '2024-03-01T00:00:00Z', properties: {} } },
         ],
       };
 
@@ -572,7 +582,7 @@ describe('KubecostClient Unit Tests', () => {
       const query = createMockQuery('monthly');
       const costResponse = {
         code: 200,
-        data: { 'ns1': { totalCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} } },
+        data: { ns1: { totalCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} } },
       };
 
       const reports = await client.callTransformCostsData(config, query, costResponse);
@@ -587,7 +597,7 @@ describe('KubecostClient Unit Tests', () => {
         code: 200,
         data: [
           null,
-          { 'ns1': { totalCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} } },
+          { ns1: { totalCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} } },
         ],
       };
 
@@ -600,10 +610,12 @@ describe('KubecostClient Unit Tests', () => {
       const query = createMockQuery('monthly');
       const costResponse = {
         code: 200,
-        data: [{
-          'bad-ts': { totalCost: 10, start: 'not-a-date', end: '2024-02-01T00:00:00Z', properties: {} },
-          'good-ts': { totalCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} },
-        }],
+        data: [
+          {
+            'bad-ts': { totalCost: 10, start: 'not-a-date', end: '2024-02-01T00:00:00Z', properties: {} },
+            'good-ts': { totalCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z', properties: {} },
+          },
+        ],
       };
 
       const reports = await client.callTransformCostsData(config, query, costResponse);
@@ -668,10 +680,7 @@ describe('KubecostClient Property-Based Tests', () => {
             }
 
             // Cost amount equals totalCost
-            const totalReportCost = (Object.values(report.reports) as number[]).reduce(
-              (sum, c) => sum + c,
-              0,
-            );
+            const totalReportCost = (Object.values(report.reports) as number[]).reduce((sum, c) => sum + c, 0);
             expect(totalReportCost).toBeCloseTo(item.totalCost, 5);
           },
         ),
@@ -686,10 +695,10 @@ describe('KubecostClient Property-Based Tests', () => {
     it('should exclude allocation items with zero or negative totalCost', async () => {
       await fc.assert(
         fc.asyncProperty(
-          fc.array(
-            fc.tuple(arbAllocationName, fc.oneof(arbPositiveCost, arbNonPositiveCost)),
-            { minLength: 1, maxLength: 10 },
-          ),
+          fc.array(fc.tuple(arbAllocationName, fc.oneof(arbPositiveCost, arbNonPositiveCost)), {
+            minLength: 1,
+            maxLength: 10,
+          }),
           arbInstanceName,
           async (items, instanceName) => {
             const config = createMockConfig({ name: instanceName });
@@ -710,9 +719,7 @@ describe('KubecostClient Property-Based Tests', () => {
             const reports = await client.callTransformCostsData(config, query, costResponse);
 
             // No report should have a service name from a non-positive cost item
-            const nonPositiveNames = items
-              .filter(([_, cost]) => cost <= 0)
-              .map(([name]) => `Kubecost/${name}`);
+            const nonPositiveNames = items.filter(([_, cost]) => cost <= 0).map(([name]) => `Kubecost/${name}`);
             const reportServiceNames = reports.map(r => r.service);
             for (const name of nonPositiveNames) {
               expect(reportServiceNames).not.toContain(name);
@@ -729,46 +736,38 @@ describe('KubecostClient Property-Based Tests', () => {
   describe('Property 3: Report period format matches query granularity', () => {
     it('should produce YYYY-MM period keys for monthly granularity', async () => {
       await fc.assert(
-        fc.asyncProperty(
-          arbAllocationItem(arbPositiveCost),
-          arbInstanceName,
-          async (item, instanceName) => {
-            const config = createMockConfig({ name: instanceName });
-            const query = createMockQuery('monthly');
-            const costResponse = { code: 200, data: [{ [item.name]: item }] };
+        fc.asyncProperty(arbAllocationItem(arbPositiveCost), arbInstanceName, async (item, instanceName) => {
+          const config = createMockConfig({ name: instanceName });
+          const query = createMockQuery('monthly');
+          const costResponse = { code: 200, data: [{ [item.name]: item }] };
 
-            const reports = await client.callTransformCostsData(config, query, costResponse);
+          const reports = await client.callTransformCostsData(config, query, costResponse);
 
-            for (const report of reports) {
-              for (const periodKey of Object.keys(report.reports)) {
-                expect(periodKey).toMatch(/^\d{4}-\d{2}$/);
-              }
+          for (const report of reports) {
+            for (const periodKey of Object.keys(report.reports)) {
+              expect(periodKey).toMatch(/^\d{4}-\d{2}$/);
             }
-          },
-        ),
+          }
+        }),
         { numRuns: 100 },
       );
     });
 
     it('should produce YYYY-MM-DD period keys for daily granularity', async () => {
       await fc.assert(
-        fc.asyncProperty(
-          arbAllocationItem(arbPositiveCost),
-          arbInstanceName,
-          async (item, instanceName) => {
-            const config = createMockConfig({ name: instanceName });
-            const query = createMockQuery('daily');
-            const costResponse = { code: 200, data: [{ [item.name]: item }] };
+        fc.asyncProperty(arbAllocationItem(arbPositiveCost), arbInstanceName, async (item, instanceName) => {
+          const config = createMockConfig({ name: instanceName });
+          const query = createMockQuery('daily');
+          const costResponse = { code: 200, data: [{ [item.name]: item }] };
 
-            const reports = await client.callTransformCostsData(config, query, costResponse);
+          const reports = await client.callTransformCostsData(config, query, costResponse);
 
-            for (const report of reports) {
-              for (const periodKey of Object.keys(report.reports)) {
-                expect(periodKey).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-              }
+          for (const report of reports) {
+            for (const periodKey of Object.keys(report.reports)) {
+              expect(periodKey).toMatch(/^\d{4}-\d{2}-\d{2}$/);
             }
-          },
-        ),
+          }
+        }),
         { numRuns: 100 },
       );
     });
@@ -793,8 +792,11 @@ describe('KubecostClient Property-Based Tests', () => {
             const timeWindowMap: Record<string, any> = {};
             for (const name of names) {
               timeWindowMap[name] = {
-                name, properties: {}, totalCost: 10,
-                start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z',
+                name,
+                properties: {},
+                totalCost: 10,
+                start: '2024-01-15T00:00:00Z',
+                end: '2024-02-01T00:00:00Z',
               };
             }
 
@@ -824,8 +826,11 @@ describe('KubecostClient Property-Based Tests', () => {
             const timeWindowMap: Record<string, any> = {};
             for (const name of names) {
               timeWindowMap[name] = {
-                name, properties: {}, totalCost: 10,
-                start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z',
+                name,
+                properties: {},
+                totalCost: 10,
+                start: '2024-01-15T00:00:00Z',
+                end: '2024-02-01T00:00:00Z',
               };
             }
 

@@ -1,7 +1,4 @@
-/**
- * @param { import("knex").Knex } knex
- * @returns { Promise<void> }
- */
+
 exports.up = async function up(knex) {
   // TODO: remove category_mappings_override table later on as it might contain some user-defined data
   await knex.schema.dropTableIfExists('category_mappings_default');

@@ -59,7 +59,9 @@ export class ElasticCloudClient extends InfraWalletClient {
       } catch (error) {
         if (attempt < maxRetries) {
           const backoffTime = Math.pow(2, attempt) * 1000;
-          this.logger.warn(`Error fetching from Elastic Cloud, retrying in ${backoffTime}ms: ${(error as Error).message}`);
+          this.logger.warn(
+            `Error fetching from Elastic Cloud, retrying in ${backoffTime}ms: ${(error as Error).message}`,
+          );
           await new Promise(resolve => setTimeout(resolve, backoffTime));
         } else {
           throw error;
@@ -116,7 +118,9 @@ export class ElasticCloudClient extends InfraWalletClient {
 
       const [instanceCostsResponse, itemCostsResponse, chartsResponse] = await Promise.all([
         this.fetchWithRetry(
-          `${baseUrl}/api/v2/billing/organizations/${organizationId}/costs/instances?${createQueryString(instanceParams)}`,
+          `${baseUrl}/api/v2/billing/organizations/${organizationId}/costs/instances?${createQueryString(
+            instanceParams,
+          )}`,
           headers,
         ).then(data => {
           const validationResult = InstancesResponseSchema.safeParse(data);

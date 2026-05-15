@@ -49,12 +49,7 @@ export class KubecostClient extends InfraWalletClient {
   /**
    * Builds the allocation API URL based on the API version.
    */
-  private buildAllocationUrl(
-    client: KubecostHttpClient,
-    window: string,
-    aggregate: string,
-    query: CostQuery,
-  ): string {
+  private buildAllocationUrl(client: KubecostHttpClient, window: string, aggregate: string, query: CostQuery): string {
     const params = new URLSearchParams();
     params.set('window', window);
     params.set('aggregate', aggregate);
@@ -100,7 +95,9 @@ export class KubecostClient extends InfraWalletClient {
 
     if (startDate < oldestAllowed) {
       this.logger.info(
-        `Kubecost: clamping start time from ${startDate.toISO()} to ${oldestAllowed.toISO()} (retention: ${maxRetentionMs / 3600000}h)`,
+        `Kubecost: clamping start time from ${startDate.toISO()} to ${oldestAllowed.toISO()} (retention: ${
+          maxRetentionMs / 3600000
+        }h)`,
       );
       startDate = oldestAllowed;
     }
@@ -145,11 +142,7 @@ export class KubecostClient extends InfraWalletClient {
     return jsonResponse;
   }
 
-  protected async transformCostsData(
-    subAccountConfig: Config,
-    query: CostQuery,
-    costResponse: any,
-  ): Promise<Report[]> {
+  protected async transformCostsData(subAccountConfig: Config, query: CostQuery, costResponse: any): Promise<Report[]> {
     const categoryMappingService = CategoryMappingService.getInstance();
     const instanceName = subAccountConfig.getString('name');
     const integrationConfig = subAccountConfig;
@@ -218,9 +211,8 @@ export class KubecostClient extends InfraWalletClient {
           continue;
         }
 
-        const period = query.granularity === GRANULARITY.MONTHLY
-          ? itemStart.toFormat('yyyy-MM')
-          : itemStart.toFormat('yyyy-MM-dd');
+        const period =
+          query.granularity === GRANULARITY.MONTHLY ? itemStart.toFormat('yyyy-MM') : itemStart.toFormat('yyyy-MM-dd');
 
         // Split costs by resource type using category mappings
         const costFields = [
@@ -253,8 +245,7 @@ export class KubecostClient extends InfraWalletClient {
             };
           }
 
-          transformedData[keyName].reports[period] =
-            (transformedData[keyName].reports[period] || 0) + cost;
+          transformedData[keyName].reports[period] = (transformedData[keyName].reports[period] || 0) + cost;
         }
         processedRecords++;
       }

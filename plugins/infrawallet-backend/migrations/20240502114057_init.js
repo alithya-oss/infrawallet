@@ -1,4 +1,3 @@
-// @ts-check
 
 /**
  * @param { import("knex").Knex } knex
