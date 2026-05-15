@@ -158,7 +158,9 @@ export const CostReportsTableComponent: FC<CostReportsTableComponentProps> = ({ 
 
           return (
             <div>
-              <span style={{ fontWeight: params.id === 'Total' ? 'bold' : 'normal' }}>{cost}</span>
+              <Typography component="span" style={{ fontWeight: params.id === 'Total' ? 'bold' : 'normal' }}>
+                {cost}
+              </Typography>
             </div>
           );
         },
@@ -190,7 +192,7 @@ export const CostReportsTableComponent: FC<CostReportsTableComponentProps> = ({ 
           if (percentage === undefined) {
             return (
               <div>
-                <span>-</span>
+                <Typography component="span">-</Typography>
               </div>
             );
           }
@@ -210,7 +212,8 @@ export const CostReportsTableComponent: FC<CostReportsTableComponentProps> = ({ 
 
           return (
             <div>
-              <span
+              <Typography
+                component="span"
                 style={{
                   fontSize: '0.82em',
                   paddingInline: '2px',
@@ -221,7 +224,7 @@ export const CostReportsTableComponent: FC<CostReportsTableComponentProps> = ({ 
               >
                 {mark}
                 {Math.abs(percentage).toLocaleString()}%
-              </span>
+              </Typography>
             </div>
           );
         },
