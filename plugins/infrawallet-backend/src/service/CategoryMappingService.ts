@@ -1,6 +1,13 @@
 import { CacheService, LoggerService } from '@backstage/backend-plugin-api';
+import { Config } from '@backstage/config';
+import { promises as fsPromises } from 'fs';
 import { CACHE_CATEGORY, DEFAULT_CATEGORY_MAPPING_CACHE_TTL } from './consts';
 import { CategoryMappings, ServiceToCategoryMappings } from './types';
+
+const DEFAULT_DATASOURCE_URL =
+  'https://raw.githubusercontent.com/electrolux-oss/infrawallet-default-category-mappings/main/default_category_mappings.json';
+
+type DatasourceType = 'file' | 'url';
 
 export class CategoryMappingService {
   private static instance: CategoryMappingService;
@@ -8,11 +15,17 @@ export class CategoryMappingService {
   constructor(
     protected readonly cache: CacheService,
     protected readonly logger: LoggerService,
+    protected readonly datasourceType: DatasourceType,
+    protected readonly datasourceTarget: string,
   ) {}
 
-  static initInstance(cache: CacheService, logger: LoggerService) {
+  static initInstance(cache: CacheService, logger: LoggerService, config?: Config) {
     if (!CategoryMappingService.instance) {
-      CategoryMappingService.instance = new CategoryMappingService(cache, logger);
+      const datasourceType =
+        (config?.getOptionalString('backend.infraWallet.categoryMappings.type') as DatasourceType) ?? 'url';
+      const datasourceTarget =
+        config?.getOptionalString('backend.infraWallet.categoryMappings.target') ?? DEFAULT_DATASOURCE_URL;
+      CategoryMappingService.instance = new CategoryMappingService(cache, logger, datasourceType, datasourceTarget);
     }
   }
 
@@ -43,23 +56,42 @@ export class CategoryMappingService {
   }
 
   private async fetchCategoryMappings(): Promise<CategoryMappings> {
-    const datasource =
-      'https://raw.githubusercontent.com/electrolux-oss/infrawallet-default-category-mappings/main/default_category_mappings.json';
+    switch (this.datasourceType) {
+      case 'file':
+        return this.loadFromFile(this.datasourceTarget);
+      case 'url':
+        return this.fetchFromUrl(this.datasourceTarget);
+      default:
+        this.logger.error(`Unknown category mappings datasource type: ${this.datasourceType}`);
+        return {};
+    }
+  }
 
-    let result: CategoryMappings = {};
+  private async loadFromFile(target: string): Promise<CategoryMappings> {
+    try {
+      const fileContent = await fsPromises.readFile(target, 'utf8');
+      const data = JSON.parse(fileContent);
+      this.logger.debug(`Category mappings loaded from file: ${target}`);
+      return data;
+    } catch (error) {
+      this.logger.error(`Failed to load category mappings from file "${target}": ${(error as Error).message}`);
+      return {};
+    }
+  }
 
-    await fetch(datasource)
-      .then(async response => {
-        const data = await response.json();
-        this.logger.debug('Default category mappings updated');
-        result = data;
-      })
-      .catch(_error => {
-        // it might fail to retrive the mappings from GitHub
-        this.logger.error('Failed to fetch default category mappings, all services will be treated as "Uncategorized"');
-      });
-
-    return result;
+  private async fetchFromUrl(url: string): Promise<CategoryMappings> {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      this.logger.debug(`Category mappings fetched from URL: ${url}`);
+      return data as CategoryMappings;
+    } catch (error) {
+      this.logger.error(`Failed to fetch category mappings from "${url}": ${(error as Error).message}`);
+      return {};
+    }
   }
 
   public async refreshCategoryMappings() {

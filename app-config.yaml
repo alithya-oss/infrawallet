@@ -34,6 +34,17 @@ backend:
     client: better-sqlite3
     connection: ':memory:'
   # workingDirectory: /tmp # Use this to configure a working directory for the scaffolder, defaults to the OS temp-dir
+  infraWallet:
+    # Local file (relative to backend working directory)
+    categoryMappings:
+      type: file
+      target: ../../examples/default_category_mappings.json
+
+    # Remote URL (default if no config provided)
+    # categoryMappings:
+    #   type: url
+    #   target: https://raw.githubusercontent.com/electrolux-oss/infrawallet-default-category-mappings/main/default_category_mappings.json
+
 
 auth:
   # see https://backstage.io/docs/auth/ to learn about auth providers

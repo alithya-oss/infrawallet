@@ -130,7 +130,7 @@ export async function createRouter(options: RouterOptions): Promise<express.Rout
   await setUpDatabase(database);
 
   // init CategoryMappingService
-  CategoryMappingService.initInstance(cache, logger);
+  CategoryMappingService.initInstance(cache, logger, config);
 
   const router = Router();
   router.use(express.json());

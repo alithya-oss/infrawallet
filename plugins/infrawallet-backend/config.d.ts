@@ -8,6 +8,26 @@ export interface Config {
         schedule?: string;
         initialDelayMinutes?: number;
       };
+      /**
+       * Configuration for category mappings datasource.
+       * Mimics the Backstage catalog location schema with type and target.
+       */
+      categoryMappings?: {
+        /**
+         * Type of datasource.
+         * - 'file': load from a local file path
+         * - 'url': fetch from a remote URL
+         * @default 'url'
+         */
+        type?: 'file' | 'url';
+        /**
+         * Target path or URL for the category mappings JSON.
+         * - When type is 'file': a file path (e.g. './examples/default_category_mappings.json')
+         * - When type is 'url': a full URL
+         * @default 'https://raw.githubusercontent.com/electrolux-oss/infrawallet-default-category-mappings/main/default_category_mappings.json'
+         */
+        target?: string;
+      };
       integrations: {
         azure?: {
           name: string;
