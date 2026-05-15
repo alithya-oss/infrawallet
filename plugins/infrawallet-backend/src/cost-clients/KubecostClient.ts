@@ -154,7 +154,6 @@ export class KubecostClient extends InfraWalletClient {
     const instanceName = subAccountConfig.getString('name');
     const integrationConfig = subAccountConfig;
 
-    // Parse tags from config
     const tags = subAccountConfig.getOptionalStringArray('tags');
     const tagKeyValues: { [key: string]: string } = {};
     tags?.forEach(tag => {
@@ -169,12 +168,19 @@ export class KubecostClient extends InfraWalletClient {
       return [];
     }
 
-    // Normalize data: ensure it's always an array of maps
+    // Normalize data: ensure it's always an array of time-window maps
     const dataArray: Array<Record<string, any>> = Array.isArray(costResponse.data)
       ? costResponse.data
       : [costResponse.data];
 
-    this.logger.debug(`Kubecost: processing ${dataArray.length} time window(s)`);
+    // Tracking variables
+    let processedRecords = 0;
+    let filteredOutZeroCost = 0;
+    let filteredOutInternal = 0;
+    let filteredOutInvalidDate = 0;
+    let filteredOutFilter = 0;
+    const uniqueKeys = new Set<string>();
+    let totalRecords = 0;
 
     const transformedData: { [key: string]: Report } = {};
 
@@ -182,47 +188,59 @@ export class KubecostClient extends InfraWalletClient {
       if (!timeWindowMap || typeof timeWindowMap !== 'object') {
         continue;
       }
+
       for (const [allocationName, allocationItem] of Object.entries(timeWindowMap)) {
-        try {
-          const item = allocationItem as any;
+        const item = allocationItem as any;
+        totalRecords++;
 
-          // Skip if item is null or not an object
-          if (!item || typeof item !== 'object' || Array.isArray(item)) {
-            continue;
-          }
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          continue;
+        }
 
-          // Exclude items with zero or negative totalCost
-          if (!item.totalCost || item.totalCost <= 0) {
-            continue;
-          }
+        if (!item.totalCost || item.totalCost <= 0) {
+          filteredOutZeroCost++;
+          continue;
+        }
 
-          // Skip Kubecost internal allocations (e.g. __idle__, __unallocated__)
-          if (allocationName.startsWith('__') && allocationName.endsWith('__')) {
-            continue;
-          }
+        if (allocationName.startsWith('__') && allocationName.endsWith('__')) {
+          filteredOutInternal++;
+          continue;
+        }
 
-          // Apply filter evaluation
-          if (!this.evaluateIntegrationFilters(allocationName, integrationConfig)) {
-            continue;
-          }
+        if (!this.evaluateIntegrationFilters(allocationName, integrationConfig)) {
+          filteredOutFilter++;
+          continue;
+        }
 
-          // Derive period key from the allocation item's start timestamp
-          const itemStart = DateTime.fromISO(item.start, { zone: 'utc' });
-          if (!itemStart.isValid) {
-            this.logger.debug(`Kubecost: skipping allocation "${allocationName}" with invalid start timestamp`);
-            continue;
-          }
-          let periodKey: string;
-          if (query.granularity === GRANULARITY.MONTHLY) {
-            periodKey = itemStart.toFormat('yyyy-MM');
-          } else {
-            periodKey = itemStart.toFormat('yyyy-MM-dd');
-          }
+        const itemStart = DateTime.fromISO(item.start, { zone: 'utc' });
+        if (!itemStart.isValid) {
+          filteredOutInvalidDate++;
+          continue;
+        }
 
-          const category = categoryMappingService.getCategoryByServiceName(this.provider, allocationName);
+        const period = query.granularity === GRANULARITY.MONTHLY
+          ? itemStart.toFormat('yyyy-MM')
+          : itemStart.toFormat('yyyy-MM-dd');
+
+        // Split costs by resource type using category mappings
+        const costFields = [
+          { field: 'cpuCost', cost: item.cpuCost || 0 },
+          { field: 'ramCost', cost: item.ramCost || 0 },
+          { field: 'gpuCost', cost: item.gpuCost || 0 },
+          { field: 'networkCost', cost: item.networkCost || 0 },
+          { field: 'loadBalancerCost', cost: item.loadBalancerCost || 0 },
+          { field: 'pvCost', cost: item.pvCost || 0 },
+          { field: 'sharedCost', cost: item.sharedCost || 0 },
+        ];
+
+        for (const { field, cost } of costFields) {
+          if (cost <= 0) continue;
+
+          const category = categoryMappingService.getCategoryByServiceName(this.provider, field);
           const keyName = `${instanceName}->${category}->${allocationName}`;
 
           if (!transformedData[keyName]) {
+            uniqueKeys.add(keyName);
             transformedData[keyName] = {
               id: keyName,
               account: `Kubecost/${instanceName}`,
@@ -235,15 +253,22 @@ export class KubecostClient extends InfraWalletClient {
             };
           }
 
-          transformedData[keyName].reports[periodKey] =
-            (transformedData[keyName].reports[periodKey] || 0) + item.totalCost;
-        } catch (err) {
-          this.logger.warn(
-            `Kubecost: error processing allocation "${allocationName}": ${(err as Error).message}`,
-          );
+          transformedData[keyName].reports[period] =
+            (transformedData[keyName].reports[period] || 0) + cost;
         }
+        processedRecords++;
       }
     }
+
+    this.logTransformationSummary({
+      processed: processedRecords,
+      uniqueReports: uniqueKeys.size,
+      zeroAmount: filteredOutZeroCost,
+      missingFields: filteredOutInternal,
+      invalidDate: filteredOutInvalidDate,
+      timeRange: filteredOutFilter,
+      totalRecords,
+    });
 
     return Object.values(transformedData);
   }

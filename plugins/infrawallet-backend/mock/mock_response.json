@@ -2301,43 +2301,61 @@
     "cluster": "atlas-cluster-2"
   },
   {
-    "id": "production-cluster->Containers->default",
+    "id": "production-cluster->Compute->default",
     "account": "Kubecost/production-cluster",
     "service": "Kubecost/default",
-    "category": "Containers",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "production-cluster",
     "environment": "production"
   },
   {
-    "id": "production-cluster->Containers->kube-system",
+    "id": "production-cluster->Compute->kube-system",
     "account": "Kubecost/production-cluster",
     "service": "Kubecost/kube-system",
-    "category": "Containers",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "production-cluster",
     "environment": "production"
   },
   {
-    "id": "production-cluster->Containers->monitoring",
+    "id": "production-cluster->Compute->monitoring",
     "account": "Kubecost/production-cluster",
     "service": "Kubecost/monitoring",
-    "category": "Containers",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "production-cluster",
     "environment": "production"
   },
   {
-    "id": "production-cluster->Containers->app-backend",
+    "id": "production-cluster->Storage->monitoring",
+    "account": "Kubecost/production-cluster",
+    "service": "Kubecost/monitoring",
+    "category": "Storage",
+    "provider": "Kubecost",
+    "cluster": "production-cluster",
+    "environment": "production"
+  },
+  {
+    "id": "production-cluster->Compute->app-backend",
     "account": "Kubecost/production-cluster",
     "service": "Kubecost/app-backend",
-    "category": "Containers",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "production-cluster",
     "environment": "production"
   },
   {
-    "id": "production-cluster->Containers->ingress-nginx",
+    "id": "production-cluster->Storage->app-backend",
+    "account": "Kubecost/production-cluster",
+    "service": "Kubecost/app-backend",
+    "category": "Storage",
+    "provider": "Kubecost",
+    "cluster": "production-cluster",
+    "environment": "production"
+  },
+  {
+    "id": "production-cluster->Networking->ingress-nginx",
     "account": "Kubecost/production-cluster",
     "service": "Kubecost/ingress-nginx",
     "category": "Networking",
@@ -2346,136 +2364,145 @@
     "environment": "production"
   },
   {
-    "id": "production-cluster->Containers->cert-manager",
+    "id": "production-cluster->Compute->ingress-nginx",
+    "account": "Kubecost/production-cluster",
+    "service": "Kubecost/ingress-nginx",
+    "category": "Compute",
+    "provider": "Kubecost",
+    "cluster": "production-cluster",
+    "environment": "production"
+  },
+  {
+    "id": "production-cluster->Compute->cert-manager",
     "account": "Kubecost/production-cluster",
     "service": "Kubecost/cert-manager",
-    "category": "Security, Identity, & Compliance",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "production-cluster",
     "environment": "production"
   },
   {
-    "id": "staging-cluster->Containers->default",
+    "id": "staging-cluster->Compute->default",
     "account": "Kubecost/staging-cluster",
     "service": "Kubecost/default",
-    "category": "Containers",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "staging-cluster",
     "environment": "staging"
   },
   {
-    "id": "staging-cluster->Containers->kube-system",
+    "id": "staging-cluster->Compute->kube-system",
     "account": "Kubecost/staging-cluster",
     "service": "Kubecost/kube-system",
-    "category": "Containers",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "staging-cluster",
     "environment": "staging"
   },
   {
-    "id": "staging-cluster->Containers->app-backend",
+    "id": "staging-cluster->Compute->app-backend",
     "account": "Kubecost/staging-cluster",
     "service": "Kubecost/app-backend",
-    "category": "Containers",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "staging-cluster",
     "environment": "staging"
   },
   {
-    "id": "staging-cluster->Containers->app-frontend",
+    "id": "staging-cluster->Storage->app-backend",
+    "account": "Kubecost/staging-cluster",
+    "service": "Kubecost/app-backend",
+    "category": "Storage",
+    "provider": "Kubecost",
+    "cluster": "staging-cluster",
+    "environment": "staging"
+  },
+  {
+    "id": "staging-cluster->Compute->app-frontend",
     "account": "Kubecost/staging-cluster",
     "service": "Kubecost/app-frontend",
-    "category": "Containers",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "staging-cluster",
     "environment": "staging"
   },
   {
-    "id": "production-cluster->Containers->payment-gateway",
+    "id": "production-cluster->Compute->payment-gateway",
     "account": "Kubecost/production-cluster",
     "service": "Kubecost/payment-gateway",
-    "category": "Containers",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "production-cluster",
     "environment": "production"
   },
   {
-    "id": "production-cluster->Containers->fraud-detection",
+    "id": "production-cluster->Networking->payment-gateway",
+    "account": "Kubecost/production-cluster",
+    "service": "Kubecost/payment-gateway",
+    "category": "Networking",
+    "provider": "Kubecost",
+    "cluster": "production-cluster",
+    "environment": "production"
+  },
+  {
+    "id": "production-cluster->Compute->fraud-detection",
     "account": "Kubecost/production-cluster",
     "service": "Kubecost/fraud-detection",
-    "category": "Security, Identity, & Compliance",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "production-cluster",
     "environment": "production"
   },
   {
-    "id": "production-cluster->Containers->transaction-processor",
+    "id": "production-cluster->Compute->transaction-processor",
     "account": "Kubecost/production-cluster",
     "service": "Kubecost/transaction-processor",
-    "category": "Containers",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "production-cluster",
     "environment": "production"
   },
   {
-    "id": "production-cluster->Containers->card-issuing",
+    "id": "production-cluster->Storage->transaction-processor",
     "account": "Kubecost/production-cluster",
-    "service": "Kubecost/card-issuing",
-    "category": "Containers",
+    "service": "Kubecost/transaction-processor",
+    "category": "Storage",
     "provider": "Kubecost",
     "cluster": "production-cluster",
     "environment": "production"
   },
   {
-    "id": "production-cluster->Containers->kyc-service",
-    "account": "Kubecost/production-cluster",
-    "service": "Kubecost/kyc-service",
-    "category": "Security, Identity, & Compliance",
-    "provider": "Kubecost",
-    "cluster": "production-cluster",
-    "environment": "production"
-  },
-  {
-    "id": "production-cluster->Containers->claims-processing",
+    "id": "production-cluster->Compute->claims-processing",
     "account": "Kubecost/production-cluster",
     "service": "Kubecost/claims-processing",
-    "category": "Containers",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "production-cluster",
     "environment": "production"
   },
   {
-    "id": "production-cluster->Containers->underwriting-engine",
+    "id": "production-cluster->Storage->claims-processing",
+    "account": "Kubecost/production-cluster",
+    "service": "Kubecost/claims-processing",
+    "category": "Storage",
+    "provider": "Kubecost",
+    "cluster": "production-cluster",
+    "environment": "production"
+  },
+  {
+    "id": "production-cluster->Compute->underwriting-engine",
     "account": "Kubecost/production-cluster",
     "service": "Kubecost/underwriting-engine",
-    "category": "Containers",
+    "category": "Compute",
     "provider": "Kubecost",
     "cluster": "production-cluster",
     "environment": "production"
   },
   {
-    "id": "production-cluster->Containers->policy-management",
+    "id": "production-cluster->Networking->underwriting-engine",
     "account": "Kubecost/production-cluster",
-    "service": "Kubecost/policy-management",
-    "category": "Containers",
-    "provider": "Kubecost",
-    "cluster": "production-cluster",
-    "environment": "production"
-  },
-  {
-    "id": "production-cluster->Containers->payment-reconciliation",
-    "account": "Kubecost/production-cluster",
-    "service": "Kubecost/payment-reconciliation",
-    "category": "Containers",
-    "provider": "Kubecost",
-    "cluster": "production-cluster",
-    "environment": "production"
-  },
-  {
-    "id": "production-cluster->Containers->insurance-quotes",
-    "account": "Kubecost/production-cluster",
-    "service": "Kubecost/insurance-quotes",
-    "category": "Containers",
+    "service": "Kubecost/underwriting-engine",
+    "category": "Networking",
     "provider": "Kubecost",
     "cluster": "production-cluster",
     "environment": "production"
