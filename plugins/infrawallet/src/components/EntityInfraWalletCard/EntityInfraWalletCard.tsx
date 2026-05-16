@@ -138,7 +138,7 @@ function getPeriodsFromReports(costData: Report[] | null): string[] {
     Object.keys(report.reports).forEach(period => periods.add(period));
   });
 
-  return Array.from(periods).sort();
+  return Array.from(periods).sort((a, b) => a.localeCompare(b));
 }
 
 export function getUniqueProjects(costData: Report[] | null): string[] {
