@@ -19,7 +19,7 @@ interface DigestCredentials {
 function parseDigestChallenge(header: string): DigestChallenge {
   const challenge: Partial<DigestChallenge> = {};
 
-  const regex = /(\w+)=(?:"([^"]+)"|([^\s,]+))/g;
+  const regex = /(\w+)=(?:"([^"]+)"|([^\s,]+))/g; // NOSONAR - uses possessive-like character classes ([^"]+ and [^\s,]+) that can't cause catastrophic backtracking
   let match: RegExpExecArray | null = regex.exec(header);
 
   while (match !== null) {
