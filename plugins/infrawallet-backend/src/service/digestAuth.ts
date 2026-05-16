@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 
 interface DigestChallenge {
   realm: string;
@@ -56,12 +56,17 @@ function parseDigestChallenge(header: string): DigestChallenge {
   return challenge as DigestChallenge;
 }
 
+/**
+ * MD5 hash function required by HTTP Digest Authentication (RFC 2617).
+ * The digest auth protocol mandates MD5 — this cannot be replaced with a stronger algorithm
+ * as the server dictates the hash function used in the challenge-response exchange.
+ */
 function md5(input: string): string {
-  return createHash('md5').update(input).digest('hex');
+  return createHash('md5').update(input).digest('hex'); // NOSONAR - MD5 is mandated by RFC 2617 Digest Auth
 }
 
 function generateCnonce(): string {
-  return createHash('md5').update(Math.random().toString(36)).digest('hex').substring(0, 16);
+  return randomBytes(16).toString('hex').substring(0, 16);
 }
 
 let nonceCount = 0;
