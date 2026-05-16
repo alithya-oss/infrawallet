@@ -1,3 +1,17 @@
+/**
+ * @file KubecostClient.test.ts
+ * @description Unit and property-based tests for the KubecostClient cost integration.
+ *
+ * This test suite validates:
+ * - Client initialization and configuration parsing
+ * - URL construction for different Kubecost API versions (v1, v2, v3)
+ * - Cost data transformation from Kubecost allocation format to InfraWallet reports
+ * - Filtering, error handling, and retention window clamping
+ * - Property-based invariants using fast-check for randomized input validation
+ *
+ * @module KubecostClient.test
+ */
+
 import fc from 'fast-check';
 import { Config } from '@backstage/config';
 
@@ -77,7 +91,11 @@ import { CostQuery } from '../service/types';
 // ─── Test Helpers ────────────────────────────────────────────────────────────
 
 /**
- * Creates a testable KubecostClient instance by exposing protected methods.
+ * Creates a testable KubecostClient instance by exposing protected methods
+ * through a public wrapper interface.
+ *
+ * @param {any} clientInstance - The KubecostClient instance to wrap
+ * @returns An object with callable wrappers for protected methods
  */
 function createTestableClient(clientInstance: any) {
   return {
@@ -89,9 +107,25 @@ function createTestableClient(clientInstance: any) {
   };
 }
 
+/** @typedef {ReturnType<typeof createTestableClient>} TestableClient */
 type TestableClient = ReturnType<typeof createTestableClient>;
 
-/** Creates a mock Config object with the given values */
+/**
+ * Creates a mock Backstage Config object with the given values.
+ * Simulates the Config interface for testing without requiring real YAML parsing.
+ *
+ * @param {object} values - Configuration values to mock
+ * @param {string} values.name - The Kubecost instance name
+ * @param {string} [values.baseUrl] - The Kubecost API base URL (defaults to https://kubecost.example.com)
+ * @param {string} [values.apiVersion] - The Kubecost API version (v1, v2, or v3)
+ * @param {string} [values.aggregate] - The allocation aggregation dimension (e.g., namespace, deployment)
+ * @param {string[]} [values.tags] - Tag key:value pairs to extract from allocations
+ * @param {object} [values.maxMetricsRetention] - Custom retention window configuration
+ * @param {number} [values.maxMetricsRetention.days] - Retention in days
+ * @param {number} [values.maxMetricsRetention.hours] - Retention in hours
+ * @param {Array<{type: string, attribute: string, pattern: string}>} [values.filters] - Include/exclude filters
+ * @returns {Config} A mocked Config object
+ */
 function createMockConfig(values: {
   name: string;
   baseUrl?: string;
@@ -129,7 +163,7 @@ function createMockConfig(values: {
   return {
     getString: (key: string) => {
       if (key === 'name') return values.name;
-      if (key === 'baseUrl') return values.baseUrl || 'http://localhost:9090';
+      if (key === 'baseUrl') return values.baseUrl || 'https://kubecost.example.com';
       throw new Error(`Unknown key: ${key}`);
     },
     getOptionalString: (key: string) => {
@@ -157,7 +191,14 @@ function createMockConfig(values: {
   } as unknown as Config;
 }
 
-/** Creates a mock CostQuery */
+/**
+ * Creates a mock CostQuery object for testing.
+ *
+ * @param {'daily' | 'monthly'} granularity - The time granularity for cost aggregation
+ * @param {string} [startTime] - Start time as Unix milliseconds string (defaults to 2024-01-01)
+ * @param {string} [endTime] - End time as Unix milliseconds string (defaults to 2024-02-01)
+ * @returns {CostQuery} A mock query object
+ */
 function createMockQuery(granularity: 'daily' | 'monthly', startTime?: string, endTime?: string): CostQuery {
   return {
     filters: '',
@@ -169,7 +210,12 @@ function createMockQuery(granularity: 'daily' | 'monthly', startTime?: string, e
   };
 }
 
-/** Creates a testable client instance */
+/**
+ * Creates a fully initialized testable KubecostClient instance with mocked dependencies.
+ * Sets up mock config, database, cache, and logger to isolate the client logic.
+ *
+ * @returns {TestableClient} A testable client wrapper with exposed protected methods
+ */
 function createTestClient(): TestableClient {
   const mockConfig = {
     getOptionalConfigArray: () => undefined,
@@ -192,19 +238,44 @@ function createTestClient(): TestableClient {
 
 // ─── Arbitrary Generators ────────────────────────────────────────────────────
 
-/** Generates a valid allocation item name (non-empty alphanumeric with hyphens) */
+/**
+ * Generates a valid Kubecost allocation item name.
+ * Names start with a lowercase letter followed by up to 30 alphanumeric characters or hyphens.
+ *
+ * @type {fc.Arbitrary<string>}
+ */
 const arbAllocationName = fc.stringMatching(/^[a-z][a-z0-9-]{0,30}$/);
 
-/** Generates a valid instance name */
+/**
+ * Generates a valid Kubecost instance name.
+ * Names start with a lowercase letter followed by up to 20 alphanumeric characters or hyphens.
+ *
+ * @type {fc.Arbitrary<string>}
+ */
 const arbInstanceName = fc.stringMatching(/^[a-z][a-z0-9-]{0,20}$/);
 
-/** Generates a positive cost value */
+/**
+ * Generates a positive cost value between 0.01 and 100,000.
+ * Used to represent valid billable allocation costs.
+ *
+ * @type {fc.Arbitrary<number>}
+ */
 const arbPositiveCost = fc.double({ min: 0.01, max: 100000, noNaN: true });
 
-/** Generates a non-positive cost value (zero or negative) */
+/**
+ * Generates a non-positive cost value (zero or negative).
+ * Used to test that zero/negative costs are properly excluded from reports.
+ *
+ * @type {fc.Arbitrary<number>}
+ */
 const arbNonPositiveCost = fc.oneof(fc.constant(0), fc.double({ min: -100000, max: -0.01, noNaN: true }));
 
-/** Generates a valid ISO timestamp string */
+/**
+ * Generates a valid ISO 8601 timestamp string between 2020 and 2025.
+ * Used for allocation start/end timestamps.
+ *
+ * @type {fc.Arbitrary<string>}
+ */
 const arbTimestamp = fc
   .date({
     min: new Date('2020-01-01T00:00:00Z'),
@@ -212,7 +283,14 @@ const arbTimestamp = fc
   })
   .map(d => d.toISOString());
 
-/** Generates a valid allocation item with a given totalCost */
+/**
+ * Generates a valid Kubecost allocation item with configurable totalCost.
+ * Includes all cost breakdown fields (cpu, gpu, ram, pv, network, shared, loadBalancer)
+ * plus metadata (name, properties, start/end timestamps).
+ *
+ * @param {fc.Arbitrary<number>} totalCost - Arbitrary for the totalCost field value
+ * @returns {fc.Arbitrary<object>} An arbitrary that produces allocation item objects
+ */
 function arbAllocationItem(totalCost: fc.Arbitrary<number>) {
   return fc.record({
     name: arbAllocationName,
@@ -230,20 +308,38 @@ function arbAllocationItem(totalCost: fc.Arbitrary<number>) {
   });
 }
 
-/** Generates tag strings in "key:value" format */
+/**
+ * Generates tag strings in "key:value" format.
+ * Keys are 1-10 lowercase letters, values are 1-10 lowercase alphanumeric characters.
+ *
+ * @type {fc.Arbitrary<string>}
+ */
 const arbTag = fc
   .tuple(fc.stringMatching(/^[a-z]{1,10}$/), fc.stringMatching(/^[a-z0-9]{1,10}$/))
   .map(([k, v]) => `${k}:${v}`);
 
-/** Generates a list of tags */
+/**
+ * Generates an array of 0 to 5 tag strings.
+ *
+ * @type {fc.Arbitrary<string[]>}
+ */
 const arbTags = fc.array(arbTag, { minLength: 0, maxLength: 5 });
 
-/** Generates a valid API version */
+/**
+ * Generates a valid Kubecost API version string (v1, v2, or v3).
+ *
+ * @type {fc.Arbitrary<string>}
+ */
 const arbApiVersion = fc.constantFrom('v1', 'v2', 'v3');
 
 // ─── Utility Functions ───────────────────────────────────────────────────────
 
-/** Escapes special regex characters in a string */
+/**
+ * Escapes special regex characters in a string to produce a safe literal pattern.
+ *
+ * @param {string} str - The string to escape
+ * @returns {string} The escaped string safe for use in a RegExp constructor
+ */
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -259,23 +355,31 @@ describe('KubecostClient Unit Tests', () => {
 
   describe('initCloudClient', () => {
     it('should extract baseUrl, name, and default apiVersion to v1', async () => {
-      const config = createMockConfig({ name: 'my-cluster', baseUrl: 'http://kubecost:9090' });
+      const config = createMockConfig({ name: 'my-cluster', baseUrl: 'https://kubecost-api.example.com' });
       const result = await client.callInitCloudClient(config);
-      expect(result.baseUrl).toBe('http://kubecost:9090');
+      expect(result.baseUrl).toBe('https://kubecost-api.example.com');
       expect(result.name).toBe('my-cluster');
       expect(result.apiVersion).toBe('v1');
     });
 
     it('should use configured apiVersion when provided', async () => {
       for (const version of ['v1', 'v2', 'v3']) {
-        const config = createMockConfig({ name: 'test', baseUrl: 'http://host:9090', apiVersion: version });
+        const config = createMockConfig({
+          name: 'test',
+          baseUrl: 'https://kubecost-cost-analyzer.example.com',
+          apiVersion: version,
+        });
         const result = await client.callInitCloudClient(config);
         expect(result.apiVersion).toBe(version);
       }
     });
 
     it('should throw on invalid apiVersion', async () => {
-      const config = createMockConfig({ name: 'test', baseUrl: 'http://host:9090', apiVersion: 'invalid' });
+      const config = createMockConfig({
+        name: 'test',
+        baseUrl: 'https://kubecost-cost-analyzer.example.com',
+        apiVersion: 'invalid',
+      });
       await expect(client.callInitCloudClient(config)).rejects.toThrow(/invalid apiVersion/);
     });
   });
@@ -301,10 +405,10 @@ describe('KubecostClient Unit Tests', () => {
     });
 
     it('should use /model/allocation with accumulate=true for v1 monthly', async () => {
-      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const config = createMockConfig({ name: 'kc', baseUrl: 'https://kubecost-api.example.com' });
       const now = Date.now();
       const query = createMockQuery('monthly', (now - 3600000).toString(), now.toString());
-      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+      const httpClient = { baseUrl: 'https://kubecost-api.example.com', name: 'kc', apiVersion: 'v1' as const };
 
       await client.callFetchCosts(config, httpClient, query);
 
@@ -314,10 +418,10 @@ describe('KubecostClient Unit Tests', () => {
     });
 
     it('should use /model/allocation with accumulate=false for v1 daily', async () => {
-      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const config = createMockConfig({ name: 'kc', baseUrl: 'https://kubecost-api.example.com' });
       const now = Date.now();
       const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
-      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+      const httpClient = { baseUrl: 'https://kubecost-api.example.com', name: 'kc', apiVersion: 'v1' as const };
 
       await client.callFetchCosts(config, httpClient, query);
 
@@ -326,10 +430,10 @@ describe('KubecostClient Unit Tests', () => {
     });
 
     it('should use /model/allocation with accumulate=month for v2 monthly', async () => {
-      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const config = createMockConfig({ name: 'kc', baseUrl: 'https://kubecost-api.example.com' });
       const now = Date.now();
       const query = createMockQuery('monthly', (now - 3600000).toString(), now.toString());
-      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v2' as const };
+      const httpClient = { baseUrl: 'https://kubecost-api.example.com', name: 'kc', apiVersion: 'v2' as const };
 
       await client.callFetchCosts(config, httpClient, query);
 
@@ -339,10 +443,10 @@ describe('KubecostClient Unit Tests', () => {
     });
 
     it('should use /model/allocation with accumulate=day for v2 daily', async () => {
-      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const config = createMockConfig({ name: 'kc', baseUrl: 'https://kubecost-api.example.com' });
       const now = Date.now();
       const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
-      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v2' as const };
+      const httpClient = { baseUrl: 'https://kubecost-api.example.com', name: 'kc', apiVersion: 'v2' as const };
 
       await client.callFetchCosts(config, httpClient, query);
 
@@ -350,10 +454,10 @@ describe('KubecostClient Unit Tests', () => {
     });
 
     it('should use same URL pattern for v3 as v2', async () => {
-      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const config = createMockConfig({ name: 'kc', baseUrl: 'https://kubecost-api.example.com' });
       const now = Date.now();
       const query = createMockQuery('monthly', (now - 3600000).toString(), now.toString());
-      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v3' as const };
+      const httpClient = { baseUrl: 'https://kubecost-api.example.com', name: 'kc', apiVersion: 'v3' as const };
 
       await client.callFetchCosts(config, httpClient, query);
 
@@ -363,10 +467,10 @@ describe('KubecostClient Unit Tests', () => {
     });
 
     it('should use namespace as default aggregate', async () => {
-      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const config = createMockConfig({ name: 'kc', baseUrl: 'https://kubecost-api.example.com' });
       const now = Date.now();
       const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
-      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+      const httpClient = { baseUrl: 'https://kubecost-api.example.com', name: 'kc', apiVersion: 'v1' as const };
 
       await client.callFetchCosts(config, httpClient, query);
 
@@ -374,10 +478,14 @@ describe('KubecostClient Unit Tests', () => {
     });
 
     it('should use configured aggregate value', async () => {
-      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090', aggregate: 'deployment' });
+      const config = createMockConfig({
+        name: 'kc',
+        baseUrl: 'https://kubecost-api.example.com',
+        aggregate: 'deployment',
+      });
       const now = Date.now();
       const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
-      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+      const httpClient = { baseUrl: 'https://kubecost-api.example.com', name: 'kc', apiVersion: 'v1' as const };
 
       await client.callFetchCosts(config, httpClient, query);
 
@@ -406,10 +514,10 @@ describe('KubecostClient Unit Tests', () => {
     });
 
     it('should format window as Unix timestamps', async () => {
-      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const config = createMockConfig({ name: 'kc', baseUrl: 'https://kubecost-api.example.com' });
       const now = Date.now();
       const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
-      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+      const httpClient = { baseUrl: 'https://kubecost-api.example.com', name: 'kc', apiVersion: 'v1' as const };
 
       await client.callFetchCosts(config, httpClient, query);
 
@@ -425,12 +533,12 @@ describe('KubecostClient Unit Tests', () => {
     });
 
     it('should clamp start time to retention window', async () => {
-      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const config = createMockConfig({ name: 'kc', baseUrl: 'https://kubecost-api.example.com' });
       // Request data from 30 days ago (exceeds 15-day default retention)
       const now = Date.now();
       const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
       const query = createMockQuery('daily', thirtyDaysAgo.toString(), now.toString());
-      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+      const httpClient = { baseUrl: 'https://kubecost-api.example.com', name: 'kc', apiVersion: 'v1' as const };
 
       await client.callFetchCosts(config, httpClient, query);
 
@@ -467,10 +575,10 @@ describe('KubecostClient Unit Tests', () => {
         text: async () => 'Forbidden',
       }) as any;
 
-      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const config = createMockConfig({ name: 'kc', baseUrl: 'https://kubecost-api.example.com' });
       const now = Date.now();
       const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
-      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+      const httpClient = { baseUrl: 'https://kubecost-api.example.com', name: 'kc', apiVersion: 'v1' as const };
 
       await expect(client.callFetchCosts(config, httpClient, query)).rejects.toThrow(/HTTP 403/);
     });
@@ -481,10 +589,10 @@ describe('KubecostClient Unit Tests', () => {
         json: async () => ({ code: 500, status: 'error', data: null }),
       }) as any;
 
-      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const config = createMockConfig({ name: 'kc', baseUrl: 'https://kubecost-api.example.com' });
       const now = Date.now();
       const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
-      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+      const httpClient = { baseUrl: 'https://kubecost-api.example.com', name: 'kc', apiVersion: 'v1' as const };
 
       await expect(client.callFetchCosts(config, httpClient, query)).rejects.toThrow(/code 500/);
     });
@@ -495,10 +603,10 @@ describe('KubecostClient Unit Tests', () => {
         json: async () => ({ data: [] }),
       }) as any;
 
-      const config = createMockConfig({ name: 'kc', baseUrl: 'http://kubecost:9090' });
+      const config = createMockConfig({ name: 'kc', baseUrl: 'https://kubecost-api.example.com' });
       const now = Date.now();
       const query = createMockQuery('daily', (now - 3600000).toString(), now.toString());
-      const httpClient = { baseUrl: 'http://kubecost:9090', name: 'kc', apiVersion: 'v1' as const };
+      const httpClient = { baseUrl: 'https://kubecost-api.example.com', name: 'kc', apiVersion: 'v1' as const };
 
       await expect(client.callFetchCosts(config, httpClient, query)).resolves.toBeDefined();
     });
@@ -868,9 +976,9 @@ describe('KubecostClient Property-Based Tests', () => {
             }) as any;
 
             try {
-              const config = createMockConfig({ name: 'test', baseUrl: 'http://localhost:9090' });
+              const config = createMockConfig({ name: 'test', baseUrl: 'https://kubecost.example.com' });
               const query = createMockQuery('monthly', (startSec * 1000).toString(), (endSec * 1000).toString());
-              const httpClient = { baseUrl: 'http://localhost:9090', name: 'test', apiVersion };
+              const httpClient = { baseUrl: 'https://kubecost.example.com', name: 'test', apiVersion };
 
               await client.callFetchCosts(config, httpClient, query);
 
