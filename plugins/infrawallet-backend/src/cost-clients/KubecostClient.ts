@@ -78,8 +78,8 @@ export class KubecostClient extends InfraWalletClient {
   }
 
   protected async fetchCosts(subAccountConfig: Config, client: KubecostHttpClient, query: CostQuery): Promise<any> {
-    let startDate = DateTime.fromMillis(parseInt(query.startTime, 10), { zone: 'utc' });
-    const endDate = DateTime.fromMillis(parseInt(query.endTime, 10), { zone: 'utc' });
+    let startDate = DateTime.fromMillis(Number.parseInt(query.startTime, 10), { zone: 'utc' });
+    const endDate = DateTime.fromMillis(Number.parseInt(query.endTime, 10), { zone: 'utc' });
 
     // Kubecost free tier only retains 15 days (360h) of data.
     // Clamp the start time so we don't request beyond the retention window.
@@ -143,39 +143,19 @@ export class KubecostClient extends InfraWalletClient {
   }
 
   protected async transformCostsData(subAccountConfig: Config, query: CostQuery, costResponse: any): Promise<Report[]> {
-    const categoryMappingService = CategoryMappingService.getInstance();
     const instanceName = subAccountConfig.getString('name');
-    const integrationConfig = subAccountConfig;
-
-    const tags = subAccountConfig.getOptionalStringArray('tags');
-    const tagKeyValues: { [key: string]: string } = {};
-    tags?.forEach(tag => {
-      const [k, v] = tag.split(':');
-      if (k && v) {
-        tagKeyValues[k.trim()] = v.trim();
-      }
-    });
 
     if (!costResponse || !costResponse.data) {
-      this.logger.warn('No valid Kubecost cost data to transform');
+      this.logger.warn(`[${instanceName}] No valid Kubecost cost data to transform`);
       return [];
     }
 
-    // Normalize data: ensure it's always an array of time-window maps
-    const dataArray: Array<Record<string, any>> = Array.isArray(costResponse.data)
-      ? costResponse.data
-      : [costResponse.data];
+    this.logger.debug(`[${instanceName}] Starting cost data transformation (granularity: ${query.granularity})`);
 
-    // Tracking variables
-    let processedRecords = 0;
-    let filteredOutZeroCost = 0;
-    let filteredOutInternal = 0;
-    let filteredOutInvalidDate = 0;
-    let filteredOutFilter = 0;
-    const uniqueKeys = new Set<string>();
-    let totalRecords = 0;
-
-    const transformedData: { [key: string]: Report } = {};
+    const tagKeyValues = this.parseTagConfig(subAccountConfig);
+    const dataArray = this.normalizeResponseData(costResponse.data);
+    const stats = { total: 0, processed: 0, zeroCost: 0, internal: 0, invalidDate: 0, filtered: 0 };
+    const transformedData: Record<string, Report> = {};
 
     for (const timeWindowMap of dataArray) {
       if (!timeWindowMap || typeof timeWindowMap !== 'object') {
@@ -183,84 +163,151 @@ export class KubecostClient extends InfraWalletClient {
       }
 
       for (const [allocationName, allocationItem] of Object.entries(timeWindowMap)) {
+        stats.total++;
         const item = allocationItem as any;
-        totalRecords++;
 
+        // Valid object with positive cost
         if (!item || typeof item !== 'object' || Array.isArray(item)) {
           continue;
         }
-
         if (!item.totalCost || item.totalCost <= 0) {
-          filteredOutZeroCost++;
+          stats.zeroCost++;
           continue;
         }
 
-        if (allocationName.startsWith('__') && allocationName.endsWith('__')) {
-          filteredOutInternal++;
+        // Skip Kubecost internal allocations
+        if (this.isInternalAllocation(allocationName)) {
+          stats.internal++;
           continue;
         }
 
-        if (!this.evaluateIntegrationFilters(allocationName, integrationConfig)) {
-          filteredOutFilter++;
+        // Apply user-defined include/exclude filters
+        if (!this.evaluateIntegrationFilters(allocationName, subAccountConfig)) {
+          stats.filtered++;
           continue;
         }
 
-        const itemStart = DateTime.fromISO(item.start, { zone: 'utc' });
-        if (!itemStart.isValid) {
-          filteredOutInvalidDate++;
+        // Valid timestamp
+        const period = this.extractPeriod(item.start, query.granularity);
+        if (!period) {
+          this.logger.debug(`[${instanceName}] Skipping "${allocationName}": invalid start timestamp "${item.start}"`);
+          stats.invalidDate++;
           continue;
         }
 
-        const period =
-          query.granularity === GRANULARITY.MONTHLY ? itemStart.toFormat('yyyy-MM') : itemStart.toFormat('yyyy-MM-dd');
-
-        // Split costs by resource type using category mappings
-        const costFields = [
-          { field: 'cpuCost', cost: item.cpuCost || 0 },
-          { field: 'ramCost', cost: item.ramCost || 0 },
-          { field: 'gpuCost', cost: item.gpuCost || 0 },
-          { field: 'networkCost', cost: item.networkCost || 0 },
-          { field: 'loadBalancerCost', cost: item.loadBalancerCost || 0 },
-          { field: 'pvCost', cost: item.pvCost || 0 },
-          { field: 'sharedCost', cost: item.sharedCost || 0 },
-        ];
-
-        for (const { field, cost } of costFields) {
-          if (cost <= 0) continue;
-
-          const category = categoryMappingService.getCategoryByServiceName(this.provider, field);
-          const keyName = `${instanceName}->${category}->${allocationName}`;
-
-          if (!transformedData[keyName]) {
-            uniqueKeys.add(keyName);
-            transformedData[keyName] = {
-              id: keyName,
-              account: `Kubecost/${instanceName}`,
-              service: `Kubecost/${allocationName}`,
-              category: category,
-              provider: this.provider,
-              providerType: PROVIDER_TYPE.INTEGRATION,
-              ...tagKeyValues,
-              reports: {},
-            };
-          }
-
-          transformedData[keyName].reports[period] = (transformedData[keyName].reports[period] || 0) + cost;
-        }
-        processedRecords++;
+        // Accumulate costs by resource type
+        this.accumulateCostFields(item, allocationName, instanceName, period, tagKeyValues, transformedData);
+        stats.processed++;
       }
     }
 
+    this.logger.debug(
+      `[${instanceName}] Transformation complete: ${stats.processed}/${stats.total} processed, ` +
+        `${Object.keys(transformedData).length} reports generated ` +
+        `(skipped: ${stats.zeroCost} zero-cost, ${stats.internal} internal, ` +
+        `${stats.invalidDate} invalid-date, ${stats.filtered} filtered)`,
+    );
+
     this.logTransformationSummary({
-      processed: processedRecords,
-      uniqueReports: uniqueKeys.size,
-      zeroAmount: filteredOutZeroCost,
-      missingFields: filteredOutInternal,
-      invalidDate: filteredOutInvalidDate,
-      timeRange: filteredOutFilter,
-      totalRecords,
+      processed: stats.processed,
+      uniqueReports: Object.keys(transformedData).length,
+      zeroAmount: stats.zeroCost,
+      missingFields: stats.internal,
+      invalidDate: stats.invalidDate,
+      timeRange: stats.filtered,
+      totalRecords: stats.total,
     });
 
     return Object.values(transformedData);
+  }
+
+  /**
+   * Parses the `tags` config array into a key-value map.
+   * Tags are expected in "key:value" format.
+   */
+  private parseTagConfig(subAccountConfig: Config): Record<string, string> {
+    const tags = subAccountConfig.getOptionalStringArray('tags');
+    const result: Record<string, string> = {};
+    tags?.forEach(tag => {
+      const [k, v] = tag.split(':');
+      if (k && v) {
+        result[k.trim()] = v.trim();
+      }
+    });
+    return result;
+  }
+
+  /**
+   * Normalizes the Kubecost response data into a consistent array of time-window maps.
+   * Handles both array format (standard) and single-object format (edge case).
+   */
+  private normalizeResponseData(data: any): Array<Record<string, any>> {
+    return Array.isArray(data) ? data : [data];
+  }
+
+  /**
+   * Checks whether an allocation name is a Kubecost internal entry (e.g., __idle__, __unallocated__).
+   */
+  private isInternalAllocation(name: string): boolean {
+    return name.startsWith('__') && name.endsWith('__');
+  }
+
+  /**
+   * Extracts the period string from an ISO timestamp based on the query granularity.
+   * Returns null if the timestamp is invalid.
+   */
+  private extractPeriod(isoTimestamp: string, granularity: string): string | null {
+    const dt = DateTime.fromISO(isoTimestamp, { zone: 'utc' });
+    if (!dt.isValid) {
+      return null;
+    }
+    return granularity === GRANULARITY.MONTHLY ? dt.toFormat('yyyy-MM') : dt.toFormat('yyyy-MM-dd');
+  }
+
+  /**
+   * Splits an allocation item's costs by resource type and accumulates them
+   * into the transformedData map, keyed by instance → category → allocation.
+   */
+  private accumulateCostFields(
+    item: any,
+    allocationName: string,
+    instanceName: string,
+    period: string,
+    tagKeyValues: Record<string, string>,
+    transformedData: Record<string, Report>,
+  ): void {
+    const categoryMappingService = CategoryMappingService.getInstance();
+
+    const costFields: Array<{ field: string; cost: number }> = [
+      { field: 'cpuCost', cost: item.cpuCost || 0 },
+      { field: 'ramCost', cost: item.ramCost || 0 },
+      { field: 'gpuCost', cost: item.gpuCost || 0 },
+      { field: 'networkCost', cost: item.networkCost || 0 },
+      { field: 'loadBalancerCost', cost: item.loadBalancerCost || 0 },
+      { field: 'pvCost', cost: item.pvCost || 0 },
+      { field: 'sharedCost', cost: item.sharedCost || 0 },
+    ];
+
+    for (const { field, cost } of costFields) {
+      if (cost <= 0) continue;
+
+      const category = categoryMappingService.getCategoryByServiceName(this.provider, field);
+      const key = `${instanceName}->${category}->${allocationName}`;
+
+      if (!transformedData[key]) {
+        transformedData[key] = {
+          id: key,
+          account: `Kubecost/${instanceName}`,
+          service: `Kubecost/${allocationName}`,
+          category,
+          provider: this.provider,
+          providerType: PROVIDER_TYPE.INTEGRATION,
+          ...tagKeyValues,
+          reports: {},
+        };
+      }
+
+      transformedData[key].reports[period] = (transformedData[key].reports[period] || 0) + cost;
+    }
   }
 }
