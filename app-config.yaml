@@ -45,7 +45,6 @@ backend:
     #   type: url
     #   target: https://raw.githubusercontent.com/electrolux-oss/infrawallet-default-category-mappings/main/default_category_mappings.json
 
-
 auth:
   # see https://backstage.io/docs/auth/ to learn about auth providers
   providers:

@@ -1,4 +1,3 @@
-
 exports.up = async function up(knex) {
   await knex.schema.createTable('cost_items_daily', table => {
     table.comment('Daily cost records automatically fetched by integration providers for a wallet');

@@ -15,9 +15,9 @@ Modify `packages/app/src/App.tsx` to include InfraWallet in your routes:
 import { InfraWalletPage } from '@electrolux-oss/plugin-infrawallet';
 // ...
 <FlatRoutes>
-    // ...
-    <Route path="/infrawallet" element={<InfraWalletPage />} />
-</FlatRoutes>
+  // ...
+  <Route path="/infrawallet" element={<InfraWalletPage />} />
+</FlatRoutes>;
 ```
 
 ## Backend
@@ -78,17 +78,13 @@ Modify `packages/app/src/components/Root/Root.tsx` to include InfraWallet in the
 ```ts
 import { InfraWalletIcon } from '@electrolux-oss/plugin-infrawallet';
 // ...
-    <Sidebar>
-      // ...
-      <SidebarGroup label="Menu" icon={<MenuIcon />}>
-        <SidebarItem
-          icon={InfraWalletIcon}
-          to="infrawallet"
-          text="InfraWallet"
-        />
-      </SidebarGroup>
-      // ...
-    </Sidebar>
+<Sidebar>
+  // ...
+  <SidebarGroup label="Menu" icon={<MenuIcon />}>
+    <SidebarItem icon={InfraWalletIcon} to="infrawallet" text="InfraWallet" />
+  </SidebarGroup>
+  // ...
+</Sidebar>;
 ```
 
 ## Integrate with Backstage catalog (optional)
@@ -96,16 +92,16 @@ import { InfraWalletIcon } from '@electrolux-oss/plugin-infrawallet';
 Modify `packages/app/src/components/catalog/EntityPage.tsx` to include the InfraWallet card in the entity page:
 
 ```ts
-import {EntityInfraWalletCard, isInfraWalletAvailable } from '@electrolux-oss/plugin-infrawallet';
+import { EntityInfraWalletCard, isInfraWalletAvailable } from '@electrolux-oss/plugin-infrawallet';
 // ...
 
-    <EntitySwitch>
-      <EntitySwitch.Case if={isInfraWalletAvailable}>
-        <Grid item md={6}>
-          <EntityInfraWalletCard />
-        </Grid>
-      </EntitySwitch.Case>
-    </EntitySwitch>
+<EntitySwitch>
+  <EntitySwitch.Case if={isInfraWalletAvailable}>
+    <Grid item md={6}>
+      <EntityInfraWalletCard />
+    </Grid>
+  </EntitySwitch.Case>
+</EntitySwitch>;
 // ...
 ```
 

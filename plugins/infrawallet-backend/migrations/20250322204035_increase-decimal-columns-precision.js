@@ -1,4 +1,3 @@
-
 exports.up = async function up(knex) {
   await knex.schema.alterTable('budgets', table => {
     table.decimal('amount', 12).notNullable().comment('The amount of a budget').alter();

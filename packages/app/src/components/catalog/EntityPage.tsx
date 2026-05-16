@@ -34,10 +34,7 @@ import {
   EntityOwnershipCard,
 } from '@backstage/plugin-org';
 import { EmptyState } from '@backstage/core-components';
-import {
-  Direction,
-  EntityCatalogGraphCard,
-} from '@backstage/plugin-catalog-graph';
+import { Direction, EntityCatalogGraphCard } from '@backstage/plugin-catalog-graph';
 import {
   RELATION_API_CONSUMED_BY,
   RELATION_API_PROVIDED_BY,
@@ -49,11 +46,7 @@ import {
   RELATION_PROVIDES_API,
 } from '@backstage/catalog-model';
 
-import {
-  EntityInfraWalletCard,
-  isInfraWalletAvailable,
-} from '@electrolux-oss/plugin-infrawallet';
-
+import { EntityInfraWalletCard, isInfraWalletAvailable } from '@electrolux-oss/plugin-infrawallet';
 
 const cicdContent = (
   // This is an example of how you can implement your company's logic in entity page.
@@ -214,13 +207,9 @@ const defaultEntityPage = (
 
 const componentPage = (
   <EntitySwitch>
-    <EntitySwitch.Case if={isComponentType('service')}>
-      {serviceEntityPage}
-    </EntitySwitch.Case>
+    <EntitySwitch.Case if={isComponentType('service')}>{serviceEntityPage}</EntitySwitch.Case>
 
-    <EntitySwitch.Case if={isComponentType('website')}>
-      {websiteEntityPage}
-    </EntitySwitch.Case>
+    <EntitySwitch.Case if={isComponentType('website')}>{websiteEntityPage}</EntitySwitch.Case>
 
     <EntitySwitch.Case>{defaultEntityPage}</EntitySwitch.Case>
   </EntitySwitch>

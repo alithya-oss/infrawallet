@@ -92,12 +92,7 @@ function buildDigestHeader(
   const ha2 = md5(`${method}:${uri}`);
 
   let response: string;
-  const parts: string[] = [
-    `username="${username}"`,
-    `realm="${realm}"`,
-    `nonce="${nonce}"`,
-    `uri="${uri}"`,
-  ];
+  const parts: string[] = [`username="${username}"`, `realm="${realm}"`, `nonce="${nonce}"`, `uri="${uri}"`];
 
   if (qop) {
     nonceCount++;

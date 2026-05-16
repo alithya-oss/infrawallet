@@ -1,4 +1,4 @@
-import { CacheService, DatabaseService, SchedulerService,LoggerService } from '@backstage/backend-plugin-api';
+import { CacheService, DatabaseService, SchedulerService, LoggerService } from '@backstage/backend-plugin-api';
 import { Config } from '@backstage/config';
 import { fetchAndSaveCosts } from '../tasks/fetchAndSaveCosts';
 import { RouterOptions } from './types';

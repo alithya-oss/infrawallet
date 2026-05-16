@@ -1,4 +1,3 @@
-
 exports.up = async function up(knex) {
   await knex.schema
     //

@@ -1,5 +1,4 @@
-import { ConfigApi, IdentityApi, 
-  FetchApi, } from '@backstage/core-plugin-api';
+import { ConfigApi, IdentityApi, FetchApi } from '@backstage/core-plugin-api';
 import { InfraWalletApi } from './InfraWalletApi';
 import { tagsToString } from './functions';
 import {
@@ -21,14 +20,13 @@ import {
 export class InfraWalletApiClient implements InfraWalletApi {
   private readonly identityApi: IdentityApi;
   private readonly backendUrl: string;
-  private readonly fetchApi: FetchApi
+  private readonly fetchApi: FetchApi;
 
   constructor(options: { identityApi: IdentityApi; configApi: ConfigApi; fetchApi: FetchApi }) {
     this.identityApi = options.identityApi;
     this.backendUrl = options.configApi.getString('backend.baseUrl');
     this.fetchApi = options.fetchApi;
   }
-  
 
   async request(path: string, method?: string, payload?: Record<string, any>) {
     const url = `${this.backendUrl}/${path}`;
