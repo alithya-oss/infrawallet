@@ -1,7 +1,7 @@
 import { CacheService, DatabaseService, LoggerService } from '@backstage/backend-plugin-api';
 import { Config, readDurationFromConfig } from '@backstage/config';
 import { durationToMilliseconds, HumanDuration } from '@backstage/types';
-import { DateTime } from 'luxon';
+import moment from 'moment';
 import { CostQuery, Report } from '../service/types';
 import { InfraWalletClient } from './InfraWalletClient';
 import { CategoryMappingService } from '../service/CategoryMappingService';
@@ -78,8 +78,8 @@ export class KubecostClient extends InfraWalletClient {
   }
 
   protected async fetchCosts(subAccountConfig: Config, client: KubecostHttpClient, query: CostQuery): Promise<any> {
-    let startDate = DateTime.fromMillis(Number.parseInt(query.startTime, 10), { zone: 'utc' });
-    const endDate = DateTime.fromMillis(Number.parseInt(query.endTime, 10), { zone: 'utc' });
+    let startDate = moment.utc(Number.parseInt(query.startTime, 10));
+    const endDate = moment.utc(Number.parseInt(query.endTime, 10));
 
     // Kubecost free tier only retains 15 days (360h) of data.
     // Clamp the start time so we don't request beyond the retention window.
@@ -91,18 +91,18 @@ export class KubecostClient extends InfraWalletClient {
       : defaultRetention;
     const maxRetentionMs = durationToMilliseconds(maxRetention);
     const bufferMs = durationToMilliseconds({ hours: 1 });
-    const oldestAllowed = DateTime.utc().minus(maxRetentionMs - bufferMs);
+    const oldestAllowed = moment.utc().subtract(maxRetentionMs - bufferMs, 'milliseconds');
 
-    if (startDate < oldestAllowed) {
+    if (startDate.isBefore(oldestAllowed)) {
       this.logger.info(
-        `Kubecost: clamping start time from ${startDate.toISO()} to ${oldestAllowed.toISO()} (retention: ${
+        `Kubecost: clamping start time from ${startDate.toISOString()} to ${oldestAllowed.toISOString()} (retention: ${
           maxRetentionMs / 3600000
         }h)`,
       );
       startDate = oldestAllowed;
     }
 
-    const window = `${Math.floor(startDate.toSeconds())},${Math.floor(endDate.toSeconds())}`;
+    const window = `${Math.floor(startDate.unix())},${Math.floor(endDate.unix())}`;
     const aggregate = subAccountConfig.getOptionalString('aggregate') || 'namespace';
 
     const url = this.buildAllocationUrl(client, window, aggregate, query);
@@ -257,11 +257,11 @@ export class KubecostClient extends InfraWalletClient {
    * Returns null if the timestamp is invalid.
    */
   private extractPeriod(isoTimestamp: string, granularity: string): string | null {
-    const dt = DateTime.fromISO(isoTimestamp, { zone: 'utc' });
-    if (!dt.isValid) {
+    const dt = moment.utc(isoTimestamp, moment.ISO_8601, true);
+    if (!dt.isValid()) {
       return null;
     }
-    return granularity === GRANULARITY.MONTHLY ? dt.toFormat('yyyy-MM') : dt.toFormat('yyyy-MM-dd');
+    return granularity === GRANULARITY.MONTHLY ? dt.format('YYYY-MM') : dt.format('YYYY-MM-DD');
   }
 
   /**
