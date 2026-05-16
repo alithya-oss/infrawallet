@@ -166,13 +166,18 @@ function createTestClient(): TestableClient {
     getOptionalString: () => undefined,
   } as unknown as Config;
 
-  const instance = KubecostClient.create(mockConfig, {} as any, { get: jest.fn(), set: jest.fn() } as any, {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    child: jest.fn().mockReturnThis(),
-  } as any);
+  const instance = KubecostClient.create(
+    mockConfig,
+    {} as any,
+    { get: jest.fn(), set: jest.fn() } as any,
+    {
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      child: jest.fn().mockReturnThis(),
+    } as any,
+  );
   return createTestableClient(instance);
 }
 
@@ -503,7 +508,14 @@ describe('KubecostClient Property-Based Transactions', () => {
     function buildTimeWindowMap(names: string[]): Record<string, any> {
       const map: Record<string, any> = {};
       for (const name of names) {
-        map[name] = { name, properties: {}, totalCost: 10, cpuCost: 10, start: '2024-01-15T00:00:00Z', end: '2024-02-01T00:00:00Z' };
+        map[name] = {
+          name,
+          properties: {},
+          totalCost: 10,
+          cpuCost: 10,
+          start: '2024-01-15T00:00:00Z',
+          end: '2024-02-01T00:00:00Z',
+        };
       }
       return map;
     }
