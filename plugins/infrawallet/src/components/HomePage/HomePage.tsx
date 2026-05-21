@@ -1,11 +1,11 @@
-import { Content, Header, HeaderTabs, Page } from '@backstage/core-components';
 import { configApiRef, useApi } from '@backstage/core-plugin-api';
-import React, { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { HomePageProps } from '../types';
+import { Header, Container } from '@backstage/ui';
 
 export const HomePage = (props: HomePageProps) => {
-  const { title, subTitle } = props;
+  const { title } = props;
   const configApi = useApi(configApiRef);
   const location = useLocation();
   const navigate = useNavigate();
@@ -14,6 +14,7 @@ export const HomePage = (props: HomePageProps) => {
   const customCostsEnabled = configApi.getOptionalBoolean('infraWallet.settings.customCosts.enabled') ?? true;
   const businessMetricsEnabled = configApi.getOptionalBoolean('infraWallet.settings.businessMetrics.enabled') ?? true;
   const overviewTab = 'overview';
+  const basePath = '/infrawallet';
   const tabConfig = [
     { id: overviewTab, label: 'Overview', enabled: true },
     { id: 'budgets', label: 'Budgets', enabled: budgetsEnabled },
@@ -24,18 +25,21 @@ export const HomePage = (props: HomePageProps) => {
   const pathSegments = location.pathname.split('/').filter(Boolean);
   const tabSegment = pathSegments[1];
   const activeTabIndex = activeTabs.findIndex(tab => tab.id === tabSegment);
-  const handleTabChange = (index: number) => {
-    const tab = activeTabs[index];
-    let newPath = `${tab.id}`;
-    if (tab.id === overviewTab) {
-      const savedParams = sessionStorage.getItem('overviewParams');
-      if (savedParams) {
-        newPath += savedParams;
-      }
-    }
 
-    navigate(newPath);
-  };
+  const headerTabs = useMemo(
+    () =>
+      activeTabs.map(tab => {
+        let href = `${basePath}/${tab.id}`;
+        if (tab.id === overviewTab) {
+          const savedParams = sessionStorage.getItem('overviewParams');
+          if (savedParams) {
+            href += savedParams;
+          }
+        }
+        return { id: tab.id, label: tab.label, href };
+      }),
+    [activeTabs, basePath, overviewTab],
+  );
 
   useEffect(() => {
     if (tabSegment === overviewTab && location.search) {
@@ -50,16 +54,11 @@ export const HomePage = (props: HomePageProps) => {
   }, [activeTabIndex, overviewTab, navigate]);
 
   return (
-    <Page themeId="tool">
-      <Header title={title ?? 'InfraWallet'} subtitle={subTitle ?? ''} />
-      <HeaderTabs
-        tabs={activeTabs.map(tab => ({ id: tab.id, label: tab.label }))}
-        onChange={handleTabChange}
-        selectedIndex={activeTabIndex}
-      />
-      <Content>
+    <>
+      <Header title={title ?? ''} tabs={headerTabs} />
+      <Container>
         <Outlet />
-      </Content>
-    </Page>
+      </Container>
+    </>
   );
 };

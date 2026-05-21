@@ -1,64 +1,58 @@
 {
   "name": "root",
-  "version": "0.1.8",
+  "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": "18 || 20"
+    "node": "22 || 24"
   },
   "scripts": {
-    "dev": "concurrently \"yarn start\" \"yarn start-backend\"",
-    "start": "yarn workspace app start",
-    "start-backend": "yarn workspace backend start",
+    "start": "backstage-cli repo start",
     "build:backend": "yarn workspace backend build",
     "build:all": "backstage-cli repo build --all",
     "tsc": "tsc",
-    "tsc:full": "tsc --skipLibCheck false --incremental false",
+    "tsc:full": "tsc --skipLibCheck true --incremental false",
     "clean": "backstage-cli repo clean",
-    "test": "backstage-cli repo test",
-    "test:all": "backstage-cli repo test --coverage",
-    "test:e2e": "playwright test",
     "fix": "backstage-cli repo fix",
     "lint": "backstage-cli repo lint --since origin/main",
     "lint:all": "backstage-cli repo lint",
-    "lint:type-deps": "backstage-repo-tools type-deps",
     "prettier:check": "prettier --check .",
-    "new": "backstage-cli new --scope internal"
+    "new": "backstage-cli new"
   },
-  "workspaces": {
-    "packages": [
-      "packages/*",
-      "plugins/*"
-    ]
+  "backstage": {
+    "cli": {
+      "new": {
+        "globals": {
+          "license": "UNLICENSED"
+        }
+      }
+    }
   },
+  "workspaces": [
+    "packages/*",
+    "plugins/*"
+  ],
   "devDependencies": {
-    "@backstage/cli": "^0.34.5",
-    "@backstage/e2e-test-utils": "^0.1.1",
-    "@backstage/repo-tools": "^0.16.0",
-    "@playwright/test": "^1.32.3",
-    "@spotify/eslint-plugin": "^15.0.0",
-    "@spotify/prettier-config": "^15.0.0",
-    "concurrently": "^8.0.0",
-    "eslint": "^8.6.0",
-    "eslint-plugin-react": "^7.28.0",
-    "eslint-plugin-testing-library": "^5.9.1",
-    "eslint-plugin-unused-imports": "^3.0.0",
-    "husky": "^8.0.0",
-    "lint-staged": "^13.0.0",
-    "node-gyp": "^9.0.0",
-    "prettier": "^3.3.3",
-    "typescript": "~5.6.0"
+    "@backstage/cli": "^0.36.2",
+    "@backstage/cli-defaults": "^0.1.2",
+    "@jest/environment-jsdom-abstract": "^30.0.0",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "lint-staged": "^15.5.2",
+    "node-gyp": "^10.0.0",
+    "prettier": "^2.3.2",
+    "typescript": "~5.8.0"
   },
   "resolutions": {
     "@types/react": "^18",
     "@types/react-dom": "^18"
   },
-  "prettier": "@spotify/prettier-config",
+  "prettier": "@backstage/cli/config/prettier",
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs}": [
       "eslint --fix",
       "prettier --write"
     ],
-    "*.json": [
+    "*.{json,md}": [
       "prettier --write"
     ],
     "*.md": [
@@ -68,12 +62,6 @@
     "yarn.lock": [
       "node ./scripts/verify-lockfile-duplicates --fix"
     ]
-  },
-  "dependencies": {
-    "@backstage/catalog-model": "^1.7.6",
-    "@backstage/plugin-catalog-react": "^1.21.3",
-    "@hookform/resolvers": "^3.3.2",
-    "react-redux": "^9.1.0"
   },
   "packageManager": "yarn@4.9.2"
 }

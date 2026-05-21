@@ -12,7 +12,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { addMonths, endOfMonth, startOfMonth } from 'date-fns';
-import { FC, default as React } from 'react';
+import { FC } from 'react';
 import { TopbarComponentProps } from '../types';
 
 export const TopbarComponent: FC<TopbarComponentProps> = ({

@@ -533,7 +533,9 @@ function BudgetInsights({ reports, budgets }: BudgetInsightsProps) {
     if (overBudgetProviders.length > 0) {
       recommendations.push({
         type: 'critical',
-        message: `${overBudgetProviders.length} provider(s) are over budget: ${overBudgetProviders.map(p => p?.provider).join(', ')}`,
+        message: `${overBudgetProviders.length} provider(s) are over budget: ${overBudgetProviders
+          .map(p => p?.provider)
+          .join(', ')}`,
       });
     }
 
@@ -547,7 +549,9 @@ function BudgetInsights({ reports, budgets }: BudgetInsightsProps) {
     if (totalProjected > totalBudget) {
       recommendations.push({
         type: 'info',
-        message: `Total projected spending (${formatCurrency(totalProjected)}) exceeds total budget (${formatCurrency(totalBudget)}) by ${formatCurrency(totalProjected - totalBudget)}`,
+        message: `Total projected spending (${formatCurrency(totalProjected)}) exceeds total budget (${formatCurrency(
+          totalBudget,
+        )}) by ${formatCurrency(totalProjected - totalBudget)}`,
       });
     }
 

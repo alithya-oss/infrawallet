@@ -1,7 +1,7 @@
-import { infraWalletPlugin } from './plugin';
+import { infrawalletPlugin } from './plugin';
 
 describe('infrawallet', () => {
   it('should export plugin', () => {
-    expect(infraWalletPlugin).toBeDefined();
+    expect(infrawalletPlugin).toBeDefined();
   });
 });

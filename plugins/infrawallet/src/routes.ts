@@ -1,10 +1,3 @@
-import { createRouteRef } from '@backstage/core-plugin-api';
+import { createRouteRef } from '@backstage/frontend-plugin-api';
 
-export const rootRouteRef = createRouteRef({
-  id: 'infrawallet',
-});
-
-export const settingsRouteRef = createRouteRef({
-  id: 'infrawallet:settings',
-  params: ['name'],
-});
+export const rootRouteRef = createRouteRef();
