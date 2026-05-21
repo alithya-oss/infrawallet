@@ -74,8 +74,8 @@ export const infraWalletPlugin = createPlugin({
   apis: [
     createApiFactory({
       api: infraWalletApiRef,
-      deps: { identityApi: identityApiRef, configApi: configApiRef },
-      factory: ({ identityApi, configApi }) => new InfraWalletApiClient({ identityApi, configApi }),
+      deps: { identityApi: identityApiRef, configApi: configApiRef, fetchApi: fetchApiRef },
+      factory: ({ identityApi, configApi, fetchApi }) => new InfraWalletApiClient({ identityApi, configApi, fetchApi }),
     }),
   ],
 });
