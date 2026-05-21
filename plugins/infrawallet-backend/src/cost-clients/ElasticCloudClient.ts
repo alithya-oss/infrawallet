@@ -116,7 +116,9 @@ export class ElasticCloudClient extends InfraWalletClient {
 
       const [instanceCostsResponse, itemCostsResponse, chartsResponse] = await Promise.all([
         this.fetchWithRetry(
-          `${baseUrl}/api/v2/billing/organizations/${organizationId}/costs/instances?${createQueryString(instanceParams)}`,
+          `${baseUrl}/api/v2/billing/organizations/${organizationId}/costs/instances?${createQueryString(
+            instanceParams,
+          )}`,
           headers,
         ).then(data => {
           const validationResult = InstancesResponseSchema.safeParse(data);

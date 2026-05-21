@@ -176,7 +176,9 @@ export class ConfluentClient extends InfraWalletClient {
     let startDate = requestStartDate.clone();
     if (startDate.isBefore(earliestAllowed)) {
       this.logger.info(
-        `Confluent API only allows lookback of ${LOOKBACK_MONTHS} months. Adjusting start date from ${startDate.format('YYYY-MM-DD')} to ${earliestAllowed.format('YYYY-MM-DD')}`,
+        `Confluent API only allows lookback of ${LOOKBACK_MONTHS} months. Adjusting start date from ${startDate.format(
+          'YYYY-MM-DD',
+        )} to ${earliestAllowed.format('YYYY-MM-DD')}`,
       );
       startDate = earliestAllowed.clone();
     }
@@ -201,7 +203,9 @@ export class ConfluentClient extends InfraWalletClient {
     }
 
     this.logger.info(
-      `Fetching Confluent costs for ${monthlyRanges.length} months from ${startDate.format('YYYY-MM')} to ${endDate.format('YYYY-MM')}`,
+      `Fetching Confluent costs for ${monthlyRanges.length} months from ${startDate.format(
+        'YYYY-MM',
+      )} to ${endDate.format('YYYY-MM')}`,
     );
 
     // Maximum number of concurrent requests to avoid overwhelming the API

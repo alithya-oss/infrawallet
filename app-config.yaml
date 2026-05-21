@@ -2,6 +2,8 @@ app:
   title: Backstage - InfraWallet
   baseUrl: http://localhost:3000
 
+  packages: all
+
 backend:
   auth:
     # TODO: once plugins have been migrated we can remove this, but right now it

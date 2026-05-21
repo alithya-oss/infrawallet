@@ -222,20 +222,17 @@ function getPerServiceCosts(costData: Report[] | null, currentPeriod: string | n
   if (!currentPeriod) {
     return {};
   }
-  return (costData ?? []).reduce(
-    (acc, report) => {
-      const service = report.service;
-      const cost = report.reports[currentPeriod] ?? 0;
-      if (typeof service === 'string') {
-        if (!acc[service]) {
-          acc[service] = 0;
-        }
-        acc[service] += cost;
+  return (costData ?? []).reduce((acc, report) => {
+    const service = report.service;
+    const cost = report.reports[currentPeriod] ?? 0;
+    if (typeof service === 'string') {
+      if (!acc[service]) {
+        acc[service] = 0;
       }
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+      acc[service] += cost;
+    }
+    return acc;
+  }, {} as Record<string, number>);
 }
 
 function getServiceTableData(

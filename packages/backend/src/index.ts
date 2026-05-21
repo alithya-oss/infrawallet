@@ -11,6 +11,7 @@ import { createBackend } from '@backstage/backend-defaults';
 const backend = createBackend();
 
 backend.add(import('@backstage/plugin-app-backend'));
+backend.add(import('@backstage/plugin-proxy-backend'));
 
 // auth plugin
 backend.add(import('@backstage/plugin-auth-backend'));
@@ -18,11 +19,8 @@ backend.add(import('@backstage/plugin-auth-backend'));
 backend.add(import('@backstage/plugin-auth-backend-module-guest-provider'));
 // See https://backstage.io/docs/auth/guest/provider
 
-// permission plugin
-backend.add(import('@backstage/plugin-permission-backend'));
-backend.add(import('@backstage/plugin-permission-backend-module-allow-all-policy'));
-
-backend.add(import('@backstage/plugin-devtools-backend'));
+// catalog plugin
+backend.add(import('@backstage/plugin-catalog-backend'));
 
 // InfraWallet plugin
 backend.add(import('@electrolux-oss/plugin-infrawallet-backend'));

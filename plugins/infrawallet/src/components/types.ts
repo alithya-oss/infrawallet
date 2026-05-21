@@ -83,5 +83,4 @@ export type BudgetsProps = {
 
 export type HomePageProps = {
   title?: string;
-  subTitle?: string;
 };
