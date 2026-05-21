@@ -1,6 +1,7 @@
 name: Build and Deploy Packages to NPM
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
   push:
@@ -57,21 +58,21 @@ jobs:
       # publish a release candidate to npm
       #############################################################################
       - name: (for rc) change infrawallet version to `semver-datetime-sha`
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: ./plugins/infrawallet
         run: |
           VERSION=$(npm pkg get version --workspaces=false | tr -d \")
           npm pkg set version=$VERSION-$(date +%F%T | tr -d '\-:')-$(echo ${{ github.sha }} | cut -c 1-7)
 
       - name: (for rc) change infrawallet-backend version to `semver-datetime-sha`
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         working-directory: ./plugins/infrawallet-backend
         run: |
           VERSION=$(npm pkg get version --workspaces=false | tr -d \")
           npm pkg set version=$VERSION-$(date +%F%T | tr -d '\-:')-$(echo ${{ github.sha }} | cut -c 1-7)
 
       - name: (for rc) publish release candidate
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           yarn config set -H 'npmAuthToken' "${{secrets.NPM_TOKEN}}"
           yarn workspaces foreach --all -v --no-private npm publish --access public --tolerate-republish --tag rc
