@@ -41,7 +41,8 @@ export const api = ApiBlueprint.make({
           configApi: configApiRef,
           fetchApi: fetchApiRef,
         },
-        factory: ({ identityApi, configApi, fetchApi }) => new InfraWalletApiClient({ identityApi, configApi, fetchApi }),
+        factory: ({ identityApi, configApi, fetchApi }) =>
+          new InfraWalletApiClient({ identityApi, configApi, fetchApi }),
       }),
     ),
 });

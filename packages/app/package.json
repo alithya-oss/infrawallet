@@ -22,6 +22,7 @@
     "@backstage/plugin-app-react": "^0.2.3",
     "@backstage/plugin-auth": "^0.1.8",
     "@backstage/plugin-catalog": "^2.0.5",
+    "@backstage/plugin-catalog-react": "^3.0.0",
     "@backstage/plugin-user-settings": "^0.9.3",
     "@backstage/ui": "^0.15.0",
     "@electrolux-oss/plugin-infrawallet": "workspace:^",

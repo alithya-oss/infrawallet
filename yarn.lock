@@ -9017,6 +9017,7 @@ __metadata:
     "@backstage/plugin-app-react": "npm:^0.2.3"
     "@backstage/plugin-auth": "npm:^0.1.8"
     "@backstage/plugin-catalog": "npm:^2.0.5"
+    "@backstage/plugin-catalog-react": "npm:^3.0.0"
     "@backstage/plugin-user-settings": "npm:^0.9.3"
     "@backstage/ui": "npm:^0.15.0"
     "@electrolux-oss/plugin-infrawallet": "workspace:^"
