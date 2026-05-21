@@ -2,9 +2,9 @@ import { CacheService, DatabaseService, LoggerService } from '@backstage/backend
 import { Config } from '@backstage/config';
 import { reduce } from 'lodash';
 import moment from 'moment';
+import urllib from 'urllib';
 import { CategoryMappingService } from '../service/CategoryMappingService';
 import { CLOUD_PROVIDER, PROVIDER_TYPE } from '../service/consts';
-import { digestFetch } from '../service/digestAuth';
 import { getBillingPeriod } from '../service/functions';
 import { CostQuery, Report } from '../service/types';
 import { InfraWalletClient } from './InfraWalletClient';
@@ -48,8 +48,10 @@ export class MongoAtlasClient extends InfraWalletClient {
 
     try {
       const fullInvoicesUrl = `https://cloud.mongodb.com/api/atlas/v2${invoicesUrl}`;
-      const response = await digestFetch(fullInvoicesUrl, client, {
+      const response = await urllib.request(fullInvoicesUrl, {
+        ...client,
         method: 'GET',
+        dataType: 'json',
         headers: {
           Accept: 'application/vnd.atlas.2023-01-01+json',
         },
@@ -78,8 +80,10 @@ export class MongoAtlasClient extends InfraWalletClient {
           const invoiceId = invoice.id;
           const csvUrl = `/orgs/${orgId}/invoices/${invoiceId}/csv`;
           const fullCsvUrl = `https://cloud.mongodb.com/api/atlas/v2${csvUrl}`;
-          const csvResponse = await digestFetch(fullCsvUrl, client, {
+          const csvResponse = await urllib.request(fullCsvUrl, {
+            ...client,
             method: 'GET',
+            dataType: 'text',
             headers: {
               Accept: 'application/vnd.atlas.2023-01-01+csv',
             },

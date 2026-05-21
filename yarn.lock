@@ -3167,6 +3167,7 @@ __metadata:
     msw: "npm:^1.0.0"
     supertest: "npm:^6.2.4"
     upath: "npm:^2.0.1"
+    urllib: "npm:^4.2.0"
     yn: "npm:^4.0.0"
     zod: "npm:^3.24.2"
   languageName: unknown
@@ -13722,7 +13723,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"form-data@npm:^4.0.0, form-data@npm:^4.0.4":
+"form-data@npm:^4.0.0, form-data@npm:^4.0.1, form-data@npm:^4.0.4":
   version: 4.0.5
   resolution: "form-data@npm:4.0.5"
   dependencies:
@@ -13764,7 +13765,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"formstream@npm:^1.1.1":
+"formstream@npm:^1.1.1, formstream@npm:^1.5.1":
   version: 1.5.2
   resolution: "formstream@npm:1.5.2"
   dependencies:
@@ -20849,7 +20850,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"qs@npm:^6.11.0, qs@npm:^6.11.2, qs@npm:^6.12.3, qs@npm:^6.14.1, qs@npm:^6.9.4, qs@npm:~6.15.1":
+"qs@npm:^6.11.0, qs@npm:^6.11.2, qs@npm:^6.12.1, qs@npm:^6.12.3, qs@npm:^6.14.1, qs@npm:^6.9.4, qs@npm:~6.15.1":
   version: 6.15.2
   resolution: "qs@npm:6.15.2"
   dependencies:
@@ -24156,7 +24157,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"type-fest@npm:^4.3.1":
+"type-fest@npm:^4.20.1, type-fest@npm:^4.3.1":
   version: 4.41.0
   resolution: "type-fest@npm:4.41.0"
   checksum: 10/617ace794ac0893c2986912d28b3065ad1afb484cad59297835a0807dc63286c39e8675d65f7de08fafa339afcb8fe06a36e9a188b9857756ae1e92ee8bda212
@@ -24387,7 +24388,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici@npm:^7.24.5":
+"undici@npm:^7.1.1, undici@npm:^7.24.5":
   version: 7.25.0
   resolution: "undici@npm:7.25.0"
   checksum: 10/038d3568c72bb976e3cc389284f7f1cc64cd70d578300e4676a449fbcb624a35fe99ac127b5f3729f18b8246d6c090444ab61b1b67736bb88f52a3e913d76bf8
@@ -24685,6 +24686,21 @@ __metadata:
     undici: "npm:^5.28.2"
     ylru: "npm:^1.3.2"
   checksum: 10/4d0a5a7afa8ae9697a573f643851f9508cf5c5a1e7d800830870740d0561bddf3599861f228b119e95d870b1dae5fe2e1183c0840ebec001fc93e9fd0b8e1701
+  languageName: node
+  linkType: hard
+
+"urllib@npm:^4.2.0":
+  version: 4.9.0
+  resolution: "urllib@npm:4.9.0"
+  dependencies:
+    form-data: "npm:^4.0.1"
+    formstream: "npm:^1.5.1"
+    mime-types: "npm:^2.1.35"
+    qs: "npm:^6.12.1"
+    type-fest: "npm:^4.20.1"
+    undici: "npm:^7.1.1"
+    ylru: "npm:^2.0.0"
+  checksum: 10/5628b5e1cbca93335daae05575818c9ddfc33d4eb5a60382efe9680c69b81ccc76eaa1d026949147258a26b6dc10c1a87ef6f3d3355fa5c606208007894aa884
   languageName: node
   linkType: hard
 
@@ -25545,6 +25561,13 @@ __metadata:
   version: 1.4.0
   resolution: "ylru@npm:1.4.0"
   checksum: 10/5437f8eb2fb5dd515845c657dde3cecaa9f6bd4c6386d2a5212d3fafe02189c7d8ebfdfc84940a7811607cb3524eb362ce95d3180d355cd5deb610aa8c82c9bc
+  languageName: node
+  linkType: hard
+
+"ylru@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "ylru@npm:2.0.0"
+  checksum: 10/e8d0b50daabe1981861f3b45d625825442601a1df1790e9f74e17093f6eee4809f3d5116c3d78a5a92349d49c1a39bd7bd6b909777943142324060705f1d2ec6
   languageName: node
   linkType: hard
 
