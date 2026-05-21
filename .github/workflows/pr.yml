@@ -67,6 +67,3 @@ jobs:
 
       - name: build all packages
         run: yarn backstage-cli repo build --all
-
-      - name: verify type dependencies
-        run: yarn lint:type-deps

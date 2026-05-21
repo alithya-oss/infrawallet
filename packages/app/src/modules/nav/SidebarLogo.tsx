@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link, sidebarConfig, useSidebarOpenState } from '@backstage/core-components';
 import { makeStyles } from '@material-ui/core';
 import { LogoFull } from './LogoFull';

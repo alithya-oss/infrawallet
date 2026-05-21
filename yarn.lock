@@ -3196,7 +3196,7 @@ __metadata:
     "@mui/x-data-grid": "npm:8.4.0"
     "@mui/x-date-pickers": "npm:7.29.3"
     "@stitches/react": "npm:1.2.8"
-    "@testing-library/jest-dom": "npm:^6.0.0"
+    "@testing-library/jest-dom": "npm:^6.9.1"
     "@testing-library/react": "npm:^16.0.0"
     "@testing-library/user-event": "npm:^14.0.0"
     "@types/lodash": "npm:^4.14.151"
@@ -7161,7 +7161,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@testing-library/jest-dom@npm:^6.0.0":
+"@testing-library/jest-dom@npm:^6.9.1":
   version: 6.9.1
   resolution: "@testing-library/jest-dom@npm:6.9.1"
   dependencies:

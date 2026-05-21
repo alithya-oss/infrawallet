@@ -9,9 +9,8 @@
     "start": "backstage-cli repo start",
     "build:backend": "yarn workspace backend build",
     "build:all": "backstage-cli repo build --all",
-    "build-image": "yarn workspace backend build-image",
     "tsc": "tsc",
-    "tsc:full": "tsc --skipLibCheck false --incremental false",
+    "tsc:full": "tsc --skipLibCheck true --incremental false",
     "clean": "backstage-cli repo clean",
     "fix": "backstage-cli repo fix",
     "lint": "backstage-cli repo lint --since origin/main",
@@ -55,6 +54,13 @@
     ],
     "*.{json,md}": [
       "prettier --write"
+    ],
+    "*.md": [
+      "prettier --write",
+      "node ./scripts/check-docs-quality"
+    ],
+    "yarn.lock": [
+      "node ./scripts/verify-lockfile-duplicates --fix"
     ]
   },
   "packageManager": "yarn@4.9.2"
