@@ -1,11 +1,4 @@
-import { createDevApp } from '@backstage/dev-utils';
-import { InfraWalletPage, infraWalletPlugin } from '../src/plugin';
+import { createDevApp } from '@backstage/frontend-dev-utils';
+import infrawalletPlugin from '../src';
 
-createDevApp()
-  .registerPlugin(infraWalletPlugin)
-  .addPage({
-    element: <InfraWalletPage />,
-    title: 'Root Page',
-    path: '/infrawallet',
-  })
-  .render();
+createDevApp({ features: [infrawalletPlugin] });

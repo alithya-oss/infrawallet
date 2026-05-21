@@ -10,7 +10,7 @@ const useStyles = makeStyles({
   },
 });
 
-const LogoIcon = () => {
+export const LogoIcon = () => {
   const classes = useStyles();
 
   return (
@@ -22,5 +22,3 @@ const LogoIcon = () => {
     </svg>
   );
 };
-
-export default LogoIcon;

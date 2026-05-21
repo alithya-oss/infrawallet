@@ -101,7 +101,7 @@ InfraWallet's AWS client is built using the AWS SDK for JavaScript. If both `acc
 
 To manage Azure costs with InfraWallet, you need to register an application in Azure. Note that InfraWallet has been tested with subscription-level cost data only.
 
-##### Steps:
+##### Steps
 
 1. After registering the application, navigate to the `Subscriptions` page and select the target subscription.
 2. Go to the `Access control (IAM)` section and assign the `Cost Management Reader` role to the newly created application.
@@ -308,7 +308,7 @@ async function main() {
 
 ## Local Development
 
-First of all, make sure you are using either Node 18 or Node 20 for this project. Your plugin has been added to the example app in this repository, meaning you'll be able to access it by running `yarn install && yarn dev` in the root directory, and then navigating to [/infrawallet](http://localhost:3000/infrawallet).
+First of all, make sure you are using either Node 18 or Node 20 for this project. Your plugin has been added to the example app in this repository, meaning you'll be able to access it by running `yarn install && yarn start` in the root directory, and then navigating to [/infrawallet](http://localhost:3000/infrawallet).
 
 You can also serve the plugin in isolation by running `yarn install && yarn start` in the plugin directory.
 This method of serving the plugin provides quicker iteration speed and a faster startup and hot reloads.

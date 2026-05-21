@@ -2,6 +2,28 @@
 
 ## Frontend
 
+### New Frontend System
+
+Install the frontend package in your Backstage app:
+
+```sh
+yarn --cwd packages/app add @electrolux-oss/plugin-infrawallet
+```
+
+The plugin will be automatically discovered if your app is configured with `app.packages: all` in `app-config.yaml`:
+
+```yaml
+app:
+  packages: all
+```
+
+No additional code changes are needed — the plugin registers its page, API, and sidebar nav item automatically.
+
+### Legacy Frontend System
+
+!!! warning "Legacy"
+The following instructions are for the legacy Backstage frontend system. If you are using the new frontend system, use the instructions above.
+
 Install the frontend package in your Backstage app:
 
 ```sh
@@ -73,6 +95,15 @@ backend:
 
 ## Add to the sidebar (optional)
 
+### New Frontend System
+
+The InfraWallet sidebar item is automatically registered by the plugin — no additional configuration is needed.
+
+### Legacy Frontend System
+
+!!! warning "Legacy"
+The following instructions are for the legacy Backstage frontend system.
+
 Modify `packages/app/src/components/Root/Root.tsx` to include InfraWallet in the sidebar menu:
 
 ```ts
@@ -88,6 +119,9 @@ import { InfraWalletIcon } from '@electrolux-oss/plugin-infrawallet';
 ```
 
 ## Integrate with Backstage catalog (optional)
+
+!!! note
+The catalog entity card currently uses the legacy frontend system extensions. It works in both the new and legacy frontend systems.
 
 Modify `packages/app/src/components/catalog/EntityPage.tsx` to include the InfraWallet card in the entity page:
 
