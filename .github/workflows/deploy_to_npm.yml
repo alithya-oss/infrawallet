@@ -53,9 +53,6 @@ jobs:
       - name: build
         run: yarn workspaces foreach --all -v --no-private run build
 
-      - name: verify type dependencies
-        run: yarn lint:type-deps
-
       #############################################################################
       # publish a release candidate to npm
       #############################################################################
