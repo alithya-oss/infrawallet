@@ -34,10 +34,11 @@ export class MongoAtlasClient extends InfraWalletClient {
     const publicKey = subAccountConfig.getString('publicKey');
     const privateKey = subAccountConfig.getString('privateKey');
 
-    return {
-      username: publicKey,
-      password: privateKey,
+    const client = {
+      digestAuth: `${publicKey}:${privateKey}`,
     };
+
+    return client;
   }
 
   protected async fetchCosts(subAccountConfig: Config, client: any, query: CostQuery): Promise<any> {
