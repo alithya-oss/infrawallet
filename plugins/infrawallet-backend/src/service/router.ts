@@ -95,11 +95,11 @@ async function getReports(
               results.push(cost);
             });
           } catch (e) {
-            logger.error(e);
+            logger.error(`${e}`);
             errors.push({
               provider: client.constructor.name,
               name: client.constructor.name,
-              error: e.message,
+              error: (e as Error).message,
             });
           }
         })();
@@ -130,7 +130,7 @@ export async function createRouter(options: RouterOptions): Promise<express.Rout
   await setUpDatabase(database);
 
   // init CategoryMappingService
-  CategoryMappingService.initInstance(cache, logger);
+  CategoryMappingService.initInstance(cache, logger, config);
 
   const router = Router();
   router.use(express.json());
@@ -151,7 +151,7 @@ export async function createRouter(options: RouterOptions): Promise<express.Rout
         message: 'Cost data fetching task has been triggered. Check logs for execution details.',
       });
     } catch (error) {
-      logger.error(`Error triggering cost data fetch task: ${error.message}`, { error });
+      logger.error(`Error triggering cost data fetch task: ${(error as Error).message}`);
 
       // Fall back to direct execution if task triggering fails
       try {
@@ -162,7 +162,7 @@ export async function createRouter(options: RouterOptions): Promise<express.Rout
           message: 'Cost data fetch completed successfully via direct execution.',
         });
       } catch (directError) {
-        logger.error(`Direct cost data fetch failed: ${directError.message}`, { error: directError });
+        logger.error(`Direct cost data fetch failed: ${(directError as Error).message}`);
         response.status(500).json({
           status: 'error',
           message: 'Failed to fetch cost data. Check logs for more details.',
@@ -247,11 +247,11 @@ export async function createRouter(options: RouterOptions): Promise<express.Rout
               tags.push(tag);
             });
           } catch (e) {
-            logger.error(e);
+            logger.error(`${e}`);
             errors.push({
               provider: client.constructor.name,
               name: client.constructor.name,
-              error: e.message,
+              error: (e as Error).message,
             });
           }
         })();
@@ -298,11 +298,11 @@ export async function createRouter(options: RouterOptions): Promise<express.Rout
               tags.push(tag);
             });
           } catch (e) {
-            logger.error(e);
+            logger.error(`${e}`);
             errors.push({
               provider: client.constructor.name,
               name: client.constructor.name,
-              error: e.message,
+              error: (e as Error).message,
             });
           }
         })();
@@ -420,11 +420,11 @@ export async function createRouter(options: RouterOptions): Promise<express.Rout
               results.push(metric);
             });
           } catch (e) {
-            logger.error(e);
+            logger.error(`${e}`);
             errors.push({
               provider: client.constructor.name,
               name: client.constructor.name,
-              error: e.message,
+              error: (e as Error).message,
             });
           }
         })();

@@ -5,6 +5,7 @@ import {
   identityApiRef,
   ApiBlueprint,
   PageBlueprint,
+  fetchApiRef,
 } from '@backstage/frontend-plugin-api';
 
 import {
@@ -38,8 +39,10 @@ export const api = ApiBlueprint.make({
         deps: {
           identityApi: identityApiRef,
           configApi: configApiRef,
+          fetchApi: fetchApiRef,
         },
-        factory: ({ identityApi, configApi }) => new InfraWalletApiClient({ identityApi, configApi }),
+        factory: ({ identityApi, configApi, fetchApi }) =>
+          new InfraWalletApiClient({ identityApi, configApi, fetchApi }),
       }),
     ),
 });
@@ -72,8 +75,8 @@ export const infraWalletPlugin = createPlugin({
   apis: [
     createApiFactory({
       api: infraWalletApiRef,
-      deps: { identityApi: identityApiRef, configApi: configApiRef },
-      factory: ({ identityApi, configApi }) => new InfraWalletApiClient({ identityApi, configApi }),
+      deps: { identityApi: identityApiRef, configApi: configApiRef, fetchApi: fetchApiRef },
+      factory: ({ identityApi, configApi, fetchApi }) => new InfraWalletApiClient({ identityApi, configApi, fetchApi }),
     }),
   ],
 });

@@ -23,6 +23,7 @@ export const SidebarContent: ExtensionDefinition = NavContentBlueprint.make({
         <Sidebar>
           <SidebarLogo />
           <SidebarGroup label="Menu" icon={<MenuIcon />}>
+            {nav.take('page:catalog')}
             <SidebarDivider />
             <SidebarScrollWrapper>{nav.rest({ sortBy: 'title' })}</SidebarScrollWrapper>
           </SidebarGroup>

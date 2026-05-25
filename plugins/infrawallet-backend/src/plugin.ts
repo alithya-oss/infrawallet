@@ -1,8 +1,8 @@
 import { coreServices, createBackendPlugin } from '@backstage/backend-plugin-api';
-import { Logger } from 'winston';
 import { InfrawalletFilterExtension, infrawalletReportFilterExtensionPoint } from './extension';
 import { createRouter } from './service/router';
 import { CostFetchTaskScheduler } from './service/scheduler';
+import { LoggerService } from '@backstage/backend-plugin-api';
 
 /**
  * infraWalletPlugin backend plugin
@@ -48,7 +48,7 @@ export const infraWalletPlugin = createBackendPlugin({
         });
 
         // 2. Initialize the task scheduler
-        const taskLogger = logger.child({ component: 'CostFetchTaskScheduler' }) as Logger;
+        const taskLogger = logger.child({ component: 'CostFetchTaskScheduler' }) as LoggerService;
         const taskScheduler = new CostFetchTaskScheduler({
           scheduler,
           logger: taskLogger,

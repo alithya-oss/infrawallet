@@ -36,6 +36,16 @@ backend:
     client: better-sqlite3
     connection: ':memory:'
   # workingDirectory: /tmp # Use this to configure a working directory for the scaffolder, defaults to the OS temp-dir
+  infraWallet:
+    # Local file (relative to backend working directory)
+    categoryMappings:
+      type: file
+      target: ../../examples/default_category_mappings.json
+
+    # Remote URL (default if no config provided)
+    # categoryMappings:
+    #   type: url
+    #   target: https://raw.githubusercontent.com/electrolux-oss/infrawallet-default-category-mappings/main/default_category_mappings.json
 
 auth:
   # see https://backstage.io/docs/auth/ to learn about auth providers
@@ -44,3 +54,36 @@ auth:
     guest:
       userEntityRef: user:default/guest
       dangerouslyAllowOutsideDevelopment: true
+
+catalog:
+  import:
+    entityFilename: catalog-info.yaml
+    pullRequestBranchName: backstage-integration
+  rules:
+    - allow: [Component, System, API, Resource, Location]
+  locations:
+    # Local example data, file locations are relative to the backend process, typically `packages/backend`
+    - type: file
+      target: ../../examples/entities.yaml
+
+    # Local example template
+    - type: file
+      target: ../../examples/template/template.yaml
+      rules:
+        - allow: [Template]
+
+    # Local example organizational data
+    - type: file
+      target: ../../examples/org.yaml
+      rules:
+        - allow: [User, Group]
+
+    ## Uncomment these lines to add more example data
+    # - type: url
+    #   target: https://github.com/backstage/backstage/blob/master/packages/catalog-model/examples/all.yaml
+
+    ## Uncomment these lines to add an example org
+    # - type: url
+    #   target: https://github.com/backstage/backstage/blob/master/packages/catalog-model/examples/acme-corp.yaml
+    #   rules:
+    #     - allow: [User, Group]

@@ -3160,15 +3160,14 @@ __metadata:
     date-fns: "npm:2.30.0"
     express: "npm:^4.17.1"
     express-promise-router: "npm:^4.1.0"
+    fast-check: "npm:^3.15.0"
     knex: "npm:^3.1.0"
     lodash: "npm:^4.17.21"
     moment: "npm:2.30.1"
     msw: "npm:^1.0.0"
-    node-fetch: "npm:^2.6.7"
     supertest: "npm:^6.2.4"
     upath: "npm:^2.0.1"
     urllib: "npm:^4.2.0"
-    winston: "npm:^3.2.1"
     yn: "npm:^4.0.0"
     zod: "npm:^3.24.2"
   languageName: unknown
@@ -3201,7 +3200,6 @@ __metadata:
     "@testing-library/user-event": "npm:^14.0.0"
     "@types/lodash": "npm:^4.14.151"
     "@types/lucene": "npm:^2"
-    "@types/node-fetch": "npm:^2.6.4"
     "@types/react": "npm:^18"
     "@types/react-date-range": "npm:1.4.5"
     "@types/uuid": "npm:10.0.0"
@@ -3211,7 +3209,6 @@ __metadata:
     moment: "npm:2.30.1"
     msw: "npm:^1.0.0"
     mui-modal-provider: "npm:2.2.0"
-    node-fetch: "npm:^2.6.7"
     react-icons: "npm:^5.5.0"
     recharts: "npm:^2.12.7"
     uuid: "npm:10.0.0"
@@ -6164,10 +6161,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@protobufjs/inquire@npm:^1.1.2":
-  version: 1.1.2
-  resolution: "@protobufjs/inquire@npm:1.1.2"
-  checksum: 10/259756489c75a751552df60d18f82503d2534855646397b96b91cf15807fa852e99bd9eb73dabb64da37aec7913844032ecb031a4326d82aae622f5e4c2f8a17
+"@protobufjs/inquire@npm:1.1.0":
+  version: 1.1.0
+  resolution: "@protobufjs/inquire@npm:1.1.0"
+  checksum: 10/c09efa34a5465cb120775e1a482136f2340a58b4abce7e93d72b8b5a9324a0e879275016ef9fcd73d72a4731639c54f2bb755bb82f916e4a78892d1d840bb3d2
   languageName: node
   linkType: hard
 
@@ -7775,16 +7772,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node-fetch@npm:^2.6.4":
-  version: 2.6.13
-  resolution: "@types/node-fetch@npm:2.6.13"
-  dependencies:
-    "@types/node": "npm:*"
-    form-data: "npm:^4.0.4"
-  checksum: 10/944d52214791ebba482ca1393a4f0d62b0dbac5f7343ff42c128b75d5356d8bcefd4df77771b55c1acd19d118e16e9bd5d2792819c51bc13402d1c87c0975435
-  languageName: node
-  linkType: hard
-
 "@types/node-forge@npm:^1.3.0":
   version: 1.3.14
   resolution: "@types/node-forge@npm:1.3.14"
@@ -9031,6 +9018,7 @@ __metadata:
     "@backstage/plugin-app-react": "npm:^0.2.3"
     "@backstage/plugin-auth": "npm:^0.1.8"
     "@backstage/plugin-catalog": "npm:^2.0.5"
+    "@backstage/plugin-catalog-react": "npm:^3.0.0"
     "@backstage/plugin-user-settings": "npm:^0.9.3"
     "@backstage/ui": "npm:^0.15.0"
     "@electrolux-oss/plugin-infrawallet": "workspace:^"
@@ -13292,6 +13280,15 @@ __metadata:
   version: 3.0.2
   resolution: "extend@npm:3.0.2"
   checksum: 10/59e89e2dc798ec0f54b36d82f32a27d5f6472c53974f61ca098db5d4648430b725387b53449a34df38fd0392045434426b012f302b3cc049a6500ccf82877e4e
+  languageName: node
+  linkType: hard
+
+"fast-check@npm:^3.15.0":
+  version: 3.23.2
+  resolution: "fast-check@npm:3.23.2"
+  dependencies:
+    pure-rand: "npm:^6.1.0"
+  checksum: 10/dab344146b778e8bc2973366ea55528d1b58d3e3037270262b877c54241e800c4d744957722c24705c787020d702aece11e57c9e3dbd5ea19c3e10926bf1f3fe
   languageName: node
   linkType: hard
 
@@ -20823,6 +20820,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pure-rand@npm:^6.1.0":
+  version: 6.1.0
+  resolution: "pure-rand@npm:6.1.0"
+  checksum: 10/256aa4bcaf9297256f552914e03cbdb0039c8fe1db11fa1e6d3f80790e16e563eb0a859a1e61082a95e224fc0c608661839439f8ecc6a3db4e48d46d99216ee4
+  languageName: node
+  linkType: hard
+
 "pure-rand@npm:^7.0.0":
   version: 7.0.1
   resolution: "pure-rand@npm:7.0.1"
@@ -25544,12 +25548,12 @@ __metadata:
   linkType: hard
 
 "yauzl@npm:^3.2.1":
-  version: 3.3.0
-  resolution: "yauzl@npm:3.3.0"
+  version: 3.3.1
+  resolution: "yauzl@npm:3.3.1"
   dependencies:
     buffer-crc32: "npm:~0.2.3"
     pend: "npm:~1.2.0"
-  checksum: 10/ac8ae5276a3fb89b80464fc828aadcb5f888af7306a7920e699b9de05aead0490ac6698bc71952ea867c3f2a2c73ed8df91f18f5b6a67ce3231065327817c08f
+  checksum: 10/b9ecac2dca8cf0ce83d29e24ab66af50c2488f12630d0778c5190cc3ca898308986a3955fb6bbc8ee6fe21eae1691ec26068760a54d873f3930718be3bbd1ce3
   languageName: node
   linkType: hard
 

@@ -35,8 +35,7 @@ import {
 } from '@mui/x-charts';
 import { max } from 'lodash';
 import moment from 'moment';
-import { FC, useCallback, useEffect, useState } from 'react';
-import * as React from 'react';
+import { Dispatch, FC, FormEvent, SetStateAction, useCallback, useEffect, useState } from 'react';
 import {
   aggregateCostReports,
   formatCurrency,
@@ -123,7 +122,7 @@ interface BudgetChartProps {
   view: string;
   budgets: Budget[];
   forecast?: number;
-  setBudgets: React.Dispatch<React.SetStateAction<Budget[]>>;
+  setBudgets: Dispatch<SetStateAction<Budget[]>>;
 }
 
 function getSpendingVelocityColor(velocity: number) {
@@ -160,7 +159,7 @@ function BudgetChart(props: Readonly<BudgetChartProps>) {
 
   const budgetAnalytics: BudgetAnalytics = calculateBudgetAnalytics(monthlyCosts, annualBudgetAmount, forecast);
 
-  const updateBudget = async (event: React.FormEvent<HTMLFormElement>) => {
+  const updateBudget = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const amount = Number(formData.get('amount') || 0);

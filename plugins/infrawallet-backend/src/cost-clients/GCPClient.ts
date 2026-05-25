@@ -67,7 +67,7 @@ export class GCPClient extends InfraWalletClient {
 
       return resolvedPath;
     } catch (error) {
-      this.logger.error(`Error resolving path ${filePath}: ${error.message}`);
+      this.logger.error(`Error resolving path ${filePath}: ${(error as Error).message}`);
       return null;
     }
   }
@@ -128,14 +128,14 @@ export class GCPClient extends InfraWalletClient {
             this.logger.warn(`GCP billing data validation failed: ${error.message}`);
             this.logger.debug(`Sample validation errors: ${JSON.stringify(error.errors.slice(0, 3))}`);
           } else {
-            this.logger.warn(`Unexpected validation error: ${error.message}`);
+            this.logger.warn(`Unexpected validation error: ${(error as Error).message}`);
           }
         }
 
         return rows;
       } catch (err) {
-        const errorMessage = err.message || '';
-        const errorCode = err.code || '';
+        const errorMessage = (err as any).message || '';
+        const errorCode = (err as any).code || '';
 
         // Check for rate limiting and quota errors
         if (errorCode === 429 || errorMessage.includes('quotaExceeded') || errorMessage.includes('rateLimitExceeded')) {
@@ -203,8 +203,8 @@ export class GCPClient extends InfraWalletClient {
 
       return await this.fetchDataWithRetry(client, queryOptions);
     } catch (err) {
-      this.logger.error(`Error executing BigQuery after retries: ${err.message}`);
-      throw new Error(err.message);
+      this.logger.error(`Error executing BigQuery after retries: ${(err as Error).message}`);
+      throw new Error((err as Error).message);
     }
   }
 

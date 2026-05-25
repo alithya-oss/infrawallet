@@ -1,3 +1,5 @@
+import { HumanDuration } from '@backstage/types';
+
 export interface Config {
   backend: {
     infraWallet: {
@@ -5,6 +7,26 @@ export interface Config {
         enabled?: boolean;
         schedule?: string;
         initialDelayMinutes?: number;
+      };
+      /**
+       * Configuration for category mappings datasource.
+       * Mimics the Backstage catalog location schema with type and target.
+       */
+      categoryMappings?: {
+        /**
+         * Type of datasource.
+         * - 'file': load from a local file path
+         * - 'url': fetch from a remote URL
+         * @default 'url'
+         */
+        type?: 'file' | 'url';
+        /**
+         * Target path or URL for the category mappings JSON.
+         * - When type is 'file': a file path (e.g. './examples/default_category_mappings.json')
+         * - When type is 'url': a full URL
+         * @default 'https://raw.githubusercontent.com/electrolux-oss/infrawallet-default-category-mappings/main/default_category_mappings.json'
+         */
+        target?: string;
       };
       integrations: {
         azure?: {
@@ -121,6 +143,39 @@ export interface Config {
            * @visibility secret
            */
           token: string;
+        }[];
+        kubecost?: {
+          name: string;
+          baseUrl: string;
+          /**
+           * API version to use for the Kubecost endpoint.
+           * - 'v1': Kubecost 1.x (endpoint: /model/allocation, accumulate as boolean)
+           * - 'v2': Kubecost 2.x (endpoint: /model/allocation, accumulate as string)
+           * - 'v3': Kubecost 3.x (same API as v2)
+           * @default 'v1'
+           */
+          apiVersion?: 'v1' | 'v2' | 'v3';
+          /**
+           * Field by which to aggregate the results.
+           * Accepts: cluster, namespace, controllerKind, controller, service, node, pod, label:<name>, and annotation:<name>.
+           * Also accepts comma-separated lists for multi-aggregation, like namespace,label:app.
+           * * @default 'namespace'
+           */
+          aggregate?: string;
+          /**
+           * Maximum metrics retention window. Kubecost free tier retains 15 days.
+           * Accepts HumanDuration format, e.g. { days: 15 }, { hours: 360 }.
+           * @default { days: 15 }
+           */
+          maxMetricsRetention?: HumanDuration;
+          tags?: string[];
+          filters?: [
+            {
+              type: string;
+              attribute: string;
+              pattern: string;
+            },
+          ];
         }[];
         mock?: {
           name: string;

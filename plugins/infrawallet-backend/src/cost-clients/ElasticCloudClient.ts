@@ -59,7 +59,9 @@ export class ElasticCloudClient extends InfraWalletClient {
       } catch (error) {
         if (attempt < maxRetries) {
           const backoffTime = Math.pow(2, attempt) * 1000;
-          this.logger.warn(`Error fetching from Elastic Cloud, retrying in ${backoffTime}ms: ${error.message}`);
+          this.logger.warn(
+            `Error fetching from Elastic Cloud, retrying in ${backoffTime}ms: ${(error as Error).message}`,
+          );
           await new Promise(resolve => setTimeout(resolve, backoffTime));
         } else {
           throw error;
@@ -99,7 +101,7 @@ export class ElasticCloudClient extends InfraWalletClient {
             `Request parameters didn't match schema for GetChartsRequest: ${JSON.stringify(error.errors)}`,
           );
         } else {
-          this.logger.warn(`Unexpected validation error: ${error.message}`);
+          this.logger.warn(`Unexpected validation error: ${(error as Error).message}`);
         }
         this.logger.debug(`Using params directly: ${JSON.stringify(params)}`);
       }
@@ -166,7 +168,7 @@ export class ElasticCloudClient extends InfraWalletClient {
         charts: chartsResponse,
       };
     } catch (error) {
-      this.logger.error(`Error fetching Elastic Cloud costs: ${error.message}`);
+      this.logger.error(`Error fetching Elastic Cloud costs: ${(error as Error).message}`);
       throw error;
     }
   }
@@ -230,7 +232,7 @@ export class ElasticCloudClient extends InfraWalletClient {
 
       return filteredReports;
     } catch (error) {
-      this.logger.error(`Error transforming Elastic Cloud cost data: ${error.message}`);
+      this.logger.error(`Error transforming Elastic Cloud cost data: ${(error as Error).message}`);
       throw error;
     }
   }

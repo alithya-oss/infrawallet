@@ -52,7 +52,7 @@ export class GitHubClient extends InfraWalletClient {
           this.logger.warn(`GitHub billing response validation failed: ${error.message}`);
           this.logger.debug(`Sample validation errors: ${JSON.stringify(error.errors.slice(0, 3))}`);
         } else {
-          this.logger.warn(`Unexpected validation error: ${error.message}`);
+          this.logger.warn(`Unexpected validation error: ${(error as Error).message}`);
         }
       }
 

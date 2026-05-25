@@ -1,4 +1,5 @@
 import { alertApiRef, useApi } from '@backstage/core-plugin-api';
+import { ChangeEvent, FormEvent, Fragment, useState } from 'react';
 import LibraryAddOutlinedIcon from '@mui/icons-material/LibraryAddOutlined';
 import Alert from '@mui/material/Alert';
 import Autocomplete from '@mui/material/Autocomplete';
@@ -22,7 +23,6 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import moment from 'moment';
-import { default as React } from 'react';
 import { infraWalletApiRef } from '../../api/InfraWalletApi';
 import { CustomCost } from '../../api/types';
 
@@ -39,9 +39,9 @@ type BulkCustomCost = {
 export const BulkInsertButton = (prop: { reloadFunction: any }) => {
   const infraWalletApi = useApi(infraWalletApiRef);
   const alertApi = useApi(alertApiRef);
-  const [open, setOpen] = React.useState(false);
-  const [submittingForm, setSubmittingForm] = React.useState(false);
-  const [bulkCustomCost, setBulkCustomCost] = React.useState<BulkCustomCost>({
+  const [open, setOpen] = useState(false);
+  const [submittingForm, setSubmittingForm] = useState(false);
+  const [bulkCustomCost, setBulkCustomCost] = useState<BulkCustomCost>({
     provider: '',
     account: '',
     service: '',
@@ -60,7 +60,7 @@ export const BulkInsertButton = (prop: { reloadFunction: any }) => {
     prop.reloadFunction();
   };
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setBulkCustomCost({ ...bulkCustomCost, [event.target.name]: event.target.value });
   };
 
@@ -89,7 +89,7 @@ export const BulkInsertButton = (prop: { reloadFunction: any }) => {
     return records;
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLDivElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLDivElement>) => {
     event.preventDefault();
     setSubmittingForm(true);
     const records = generateRecords();
@@ -110,7 +110,7 @@ export const BulkInsertButton = (prop: { reloadFunction: any }) => {
   };
 
   return (
-    <React.Fragment>
+    <Fragment>
       <Button startIcon={<LibraryAddOutlinedIcon />} onClick={handleClickOpen}>
         Bulk Add
       </Button>
@@ -278,6 +278,6 @@ export const BulkInsertButton = (prop: { reloadFunction: any }) => {
           <Button onClick={handleClose}>Cancel</Button>
         </DialogActions>
       </Dialog>
-    </React.Fragment>
+    </Fragment>
   );
 };
